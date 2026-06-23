@@ -159,6 +159,32 @@ export function buildLayout(
     if (dagreIds.has(e.source_id) && tg && !g.hasEdge(e.source_id, tg) && !g.hasEdge(tg, e.source_id)) g.setEdge(e.source_id, tg)
   })
 
+  const nodesById = new Map(visibleNodes.map(n => [n.id, n]))
+
+  // Synthetic parent→child edges for non-group semantic relationships.
+  // Nodes whose parent_id points to a non-group (service, component, module) node
+  // have no layout anchor in Dagre and pile up in rank 0. Adding a parent→child
+  // edge places them one rank to the right of their semantic parent in LR layout.
+  visibleNodes.forEach(n => {
+    if (n.parent_id && !childToGroup.has(n.id) && dagreIds.has(n.id)) {
+      if (dagreIds.has(n.parent_id)) {
+        // Direct semantic parent is in Dagre
+        if (!g.hasEdge(n.parent_id, n.id) && !g.hasEdge(n.id, n.parent_id)) {
+          g.setEdge(n.parent_id, n.id)
+        }
+      } else {
+        // Parent might be a group child (e.g. a page). Connect to the grandparent group.
+        const parent = nodesById.get(n.parent_id)
+        if (parent) {
+          const grandGroup = childToGroup.get(parent.id)
+          if (grandGroup && dagreIds.has(grandGroup) && !g.hasEdge(grandGroup, n.id) && !g.hasEdge(n.id, grandGroup)) {
+            g.setEdge(grandGroup, n.id)
+          }
+        }
+      }
+    }
+  })
+
   // ── Sub-Dagre for group children (forceAuto only) ───────────────────────
   const childrenByGroup = new Map<string, ArchitectureNode[]>()
   visibleNodes
