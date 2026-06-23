@@ -1,0 +1,126 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #030712;
+  color: #f9fafb;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+}
+
+
+/* Node entrance animation — uses 'scale' property (not transform) so it doesn't
+   override the node's inline transform: translate(x, y) position via fill-mode */
+@keyframes rf-node-enter {
+  from {
+    opacity: 0;
+    scale: 0.94;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* ReactFlow node position animation */
+.react-flow__node {
+  cursor: pointer;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease;
+  animation: rf-node-enter 0.22s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+/* 드래그 중에는 position transition 끔 (animation: none 쓰면 드래그 종료 시 재애니메이션으로 깜빡임 발생) */
+.rf-dragging .react-flow__node {
+  transition: opacity 0.2s ease;
+  animation-play-state: paused;
+}
+
+/* 드래그 중 미니맵은 잦은 re-render로 깜빡임이 보여서, 부드럽게 숨겨 체감 깜빡임을 제거 */
+.react-flow__minimap {
+  transition: opacity 0.12s ease;
+}
+.rf-dragging .react-flow__minimap {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Edge path animation */
+.react-flow__edge-path {
+  transition: d 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.18s ease,
+              stroke-width 0.15s ease;
+}
+
+/* Edge label text */
+.react-flow__edge-textwrapper {
+  transition: opacity 0.15s ease;
+}
+
+/* Smooth viewport pan/zoom */
+.react-flow__viewport {
+  transition: none; /* controlled by fitView duration param */
+}
+
+/* Panel resize handle */
+.panel-handle {
+  width: 4px;
+  background: #1f2937;
+  transition: background 0.15s ease;
+  cursor: col-resize;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.panel-handle[data-separator]:hover,
+.panel-handle[data-separator][data-active] {
+  background: #3b82f6;
+}
+
+/* Expand the invisible hit-area via pseudo-element */
+.panel-handle::before {
+  content: '';
+  position: absolute;
+  inset: 0 -6px;
+}
+
+/* ReactFlow Controls dark theme */
+.react-flow__controls-button {
+  background: #111827 !important;
+  border-color: #374151 !important;
+  color: #9ca3af !important;
+  fill: #9ca3af !important;
+}
+.react-flow__controls-button:hover {
+  background: #1f2937 !important;
+  color: #f9fafb !important;
+  fill: #f9fafb !important;
+}
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+/* Custom scrollbar for panels */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
