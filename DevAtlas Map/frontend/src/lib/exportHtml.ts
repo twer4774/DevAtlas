@@ -1,5 +1,5 @@
 import type { Node, Edge as RFEdge } from '@xyflow/react'
-import type { ArchitectureNode } from '@/types'
+import type { ArchitectureNode, Document } from '@/types'
 
 const TYPE_COLORS: Record<string, string> = {
   service: '#6366f1', backend: '#6366f1', api: '#8b5cf6',
@@ -59,9 +59,14 @@ interface EdgeInfo {
   label?: string; stroke: string; parallelOffset?: number
 }
 
+interface DocInfo {
+  id: string; title: string; type: string; linkedNodeIds: string[]; content: string | null
+}
+
 export function generateExportHtml(
   rfNodes: Node[],
   rfEdges: RFEdge[],
+  docs: (Document & { content: string | null })[] = [],
   title = 'Architecture Map',
 ): string {
   const NODE_W = 210
@@ -139,7 +144,48 @@ export function generateExportHtml(
     maxY: Math.max(...all.map(n => n.y + n.h)) + pad,
   }
 
+  const docInfos: DocInfo[] = docs.map(d => ({
+    id: d.id, title: d.title, type: d.type,
+    linkedNodeIds: d.linked_node_ids, content: d.content,
+  }))
+
   const archCount = nodeInfos.filter(n => n.type === 'archNode').length
+
+  // Prevent </script> inside user-generated content from closing the script tag.
+  // JSON-encoding a forward-slash with \/ is valid JSON and won't be parsed as </script>.
+  const sj = (obj: unknown): string =>
+    JSON.stringify(obj).replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--')
+
+  // String.raw preserves \n, \d, \s etc. so regex escapes survive template-literal embedding.
+  const renderMdFn = String.raw`function renderMd(md){
+  if(!md)return'';
+  var blocks=[];
+  md=md.replace(/\x60\x60\x60([\s\S]*?)\x60\x60\x60/g,function(_,c){
+    var idx=blocks.length;
+    blocks.push('<pre><code>'+e(c.trim())+'</code></pre>');
+    return'\x01'+idx+'\x01';
+  });
+  md=md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  md=md.replace(/\x60([^\x60\n]+)\x60/g,'<code>$1</code>');
+  md=md.replace(/\*\*\*([^*]+)\*\*\*/g,'<strong><em>$1</em></strong>');
+  md=md.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  md=md.replace(/\*([^*\n]+)\*/g,'<em>$1</em>');
+  md=md.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  md=md.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  md=md.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  md=md.replace(/^---$/gm,'<hr>');
+  md=md.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
+  md=md.replace(/((?:^[ \t]*[-*] .+\n?)+)/gm,function(m){return'<ul>'+m.replace(/^[ \t]*[-*] (.+)$/gm,'<li>$1</li>')+'</ul>';});
+  md=md.replace(/((?:^\d+\. .+\n?)+)/gm,function(m){return'<ol>'+m.replace(/^\d+\. (.+)$/gm,'<li>$1</li>')+'</ol>';});
+  md=md.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
+  md=md.split(/\n\n+/).map(function(p){
+    p=p.trim();
+    if(!p||/^(<(h[1-6]|ul|ol|pre|hr|blockquote)|\x01)/.test(p))return p;
+    return'<p>'+p.replace(/\n/g,'<br>')+'</p>';
+  }).join('\n');
+  md=md.replace(/\x01(\d+)\x01/g,function(_,i){return blocks[+i];});
+  return md;
+}`
 
   return `<!DOCTYPE html>
 <html lang="ko">
@@ -202,6 +248,29 @@ html,body{height:100%;overflow:hidden;background:#030810;color:#e5e7eb;
 .p-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .p-cname{font-size:12px;color:#d1d5db;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .p-tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;margin:2px}
+.p-doc{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #111827;
+  cursor:pointer;user-select:none}
+.p-doc:hover .p-cname{color:#f9fafb}
+.p-doc-arrow{font-size:10px;color:#4b5563;margin-left:auto;flex-shrink:0;transition:transform .2s}
+.p-doc-arrow.open{transform:rotate(90deg)}
+.p-doc-body{overflow:hidden;max-height:0;transition:max-height .3s ease;
+  background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px}
+.p-doc-body.open{max-height:2000px}
+.p-doc-md{padding:10px 12px;font-size:12px;color:#9ca3af;line-height:1.7;overflow-wrap:break-word}
+.p-doc-md h1,.p-doc-md h2,.p-doc-md h3{color:#e5e7eb;font-weight:700;margin:10px 0 4px}
+.p-doc-md h1{font-size:15px}.p-doc-md h2{font-size:13px}.p-doc-md h3{font-size:12px}
+.p-doc-md p{margin:4px 0}
+.p-doc-md ul,.p-doc-md ol{padding-left:16px;margin:4px 0}
+.p-doc-md li{margin:2px 0}
+.p-doc-md code{background:rgba(255,255,255,.08);border-radius:3px;padding:1px 5px;
+  font-size:11px;font-family:monospace}
+.p-doc-md pre{background:rgba(0,0,0,.4);border-radius:6px;padding:8px 10px;
+  overflow-x:auto;margin:6px 0}
+.p-doc-md pre code{background:none;padding:0}
+.p-doc-md strong{color:#e5e7eb;font-weight:600}
+.p-doc-md a{color:#60a5fa}
+.p-doc-md hr{border:none;border-top:1px solid #1e2d3d;margin:8px 0}
+.p-doc-md blockquote{border-left:2px solid #374151;margin:6px 0;padding:2px 10px;color:#6b7280}
 
 /* HUD */
 #hud{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
@@ -263,16 +332,20 @@ html,body{height:100%;overflow:hidden;background:#030810;color:#e5e7eb;
 
 <script>
 (function(){
-const NODES=${JSON.stringify(nodeInfos)};
-const EDGES=${JSON.stringify(edgeInfos)};
+try{
+const NODES=${sj(nodeInfos)};
+const EDGES=${sj(edgeInfos)};
 const GC=${JSON.stringify(GROUP_COLORS)};
 const TC=${JSON.stringify(TYPE_COLORS)};
 const TL=${JSON.stringify(TYPE_LABELS)};
 const TI=${JSON.stringify(TYPE_ICONS)};
 const SC=${JSON.stringify(STATUS_COLORS)};
 const BBOX=${JSON.stringify(bbox)};
+const DOCS=${sj(docInfos)};
 
 let T={x:0,y:0,s:1},drag=false,dp={},selId=null;
+
+${renderMdFn}
 
 const wrap=document.getElementById('wrap');
 const svgVp=document.getElementById('svg-vp');
@@ -310,21 +383,42 @@ function hexRgb(hex,a){
 
 function nodeById(id){return NODES.find(n=>n.id===id)}
 
-function handles(node){
-  const h=node.h||120;
-  return{
-    r:{x:node.x+node.w, y:node.y+h/2},
-    l:{x:node.x,        y:node.y+h/2},
-  };
+// Picks the best source/target handles based on relative node positions.
+// MARGIN keeps the path endpoint just outside the node card so the arrowhead is visible.
+function chooseHandles(src,tgt){
+  const MARGIN=2;
+  const sh=src.h||120, th=tgt.h||120;
+  const srcCX=src.x+src.w/2, srcCY=src.y+sh/2;
+  const tgtCX=tgt.x+tgt.w/2, tgtCY=tgt.y+th/2;
+  const dx=tgtCX-srcCX, dy=tgtCY-srcCY;
+  if(Math.abs(dx)>=Math.abs(dy)){
+    if(dx>=0){
+      return{sx:src.x+src.w,sy:srcCY,sp:'right', tx:tgt.x-MARGIN,        ty:tgtCY,tp:'left'};
+    } else {
+      return{sx:src.x,      sy:srcCY,sp:'left',  tx:tgt.x+tgt.w+MARGIN,  ty:tgtCY,tp:'right'};
+    }
+  } else {
+    if(dy>=0){
+      return{sx:srcCX,sy:src.y+sh,sp:'bottom', tx:tgtCX,ty:tgt.y-MARGIN,      tp:'top'};
+    } else {
+      return{sx:srcCX,sy:src.y,   sp:'top',    tx:tgtCX,ty:tgt.y+th+MARGIN,   tp:'bottom'};
+    }
+  }
 }
 
-function bezier(sx,sy,tx,ty,off){
+// Direction-aware cubic bezier — control points follow the handle direction.
+function bezierPath(sx,sy,sp,tx,ty,tp,off){
   off=off||0;
-  const dx=Math.abs(tx-sx),c=0.25;
-  const cp1x=sx+dx*c, cp2x=tx-dx*c;
+  const dx=Math.abs(tx-sx), dy=Math.abs(ty-sy), c=0.35;
+  let cp1x=sx,cp1y=sy;
+  if(sp==='right') cp1x+=dx*c; else if(sp==='left') cp1x-=dx*c;
+  else if(sp==='bottom') cp1y+=dy*c; else if(sp==='top') cp1y-=dy*c;
+  let cp2x=tx,cp2y=ty;
+  if(tp==='left') cp2x-=dx*c; else if(tp==='right') cp2x+=dx*c;
+  else if(tp==='top') cp2y-=dy*c; else if(tp==='bottom') cp2y+=dy*c;
   const vx=tx-sx, vy=ty-sy, len=Math.sqrt(vx*vx+vy*vy)||1;
   const ox=(-vy/len)*off, oy=(vx/len)*off;
-  return'M '+sx+','+sy+' C '+(cp1x+ox)+','+(sy+oy)+' '+(cp2x+ox)+','+(ty+oy)+' '+tx+','+ty;
+  return'M '+sx+','+sy+' C '+(cp1x+ox)+','+(cp1y+oy)+' '+(cp2x+ox)+','+(cp2y+oy)+' '+tx+','+ty;
 }
 
 // ── Groups ────────────────────────────────────────────────────────────────
@@ -363,7 +457,7 @@ function renderEdges(){
   EDGES.forEach(e=>{
     const mid='m'+e.id.replace(/[^a-z0-9]/gi,'_');
     if(!document.getElementById(mid)){
-      const m=svgE('marker',{id:mid,markerWidth:10,markerHeight:7,refX:9,refY:3.5,orient:'auto'});
+      const m=svgE('marker',{id:mid,markerWidth:10,markerHeight:7,refX:10,refY:3.5,orient:'auto'});
       m.appendChild(svgE('path',{d:'M0,0 L0,7 L10,3.5 z',fill:e.stroke}));
       defs.appendChild(m);
     }
@@ -372,14 +466,14 @@ function renderEdges(){
   EDGES.forEach(e=>{
     const src=nodeById(e.source), tgt=nodeById(e.target);
     if(!src||!tgt)return;
-    const sh=handles(src), th=handles(tgt);
-    const d=bezier(sh.r.x,sh.r.y,th.l.x,th.l.y,e.parallelOffset||0);
+    const h=chooseHandles(src,tgt);
+    const d=bezierPath(h.sx,h.sy,h.sp,h.tx,h.ty,h.tp,e.parallelOffset||0);
     const mid='m'+e.id.replace(/[^a-z0-9]/gi,'_');
     const grp=svgE('g',{});
 
     const path=svgE('path',{
       d,fill:'none',stroke:e.stroke,
-      'stroke-width':1.5,opacity:.4,
+      'stroke-width':1.5,opacity:.65,
       'marker-end':'url(#'+mid+')',
       'data-eid':e.id,class:'ep',
       style:'pointer-events:none',
@@ -396,8 +490,8 @@ function renderEdges(){
       path.setAttribute('opacity','1');
       path.setAttribute('stroke-width','2.5');
       if(e.label){
-        const mx=(sh.r.x+th.l.x)/2*T.s+T.x;
-        const my=(sh.r.y+th.l.y)/2*T.s+T.y;
+        const mx=(h.sx+h.tx)/2*T.s+T.x;
+        const my=(h.sy+h.ty)/2*T.s+T.y;
         elabel.textContent=e.label;
         elabel.style.cssText=
           'display:block;position:absolute;left:'+mx+'px;top:'+my+'px;'+
@@ -407,7 +501,7 @@ function renderEdges(){
       }
     });
     hit.addEventListener('mouseleave',()=>{
-      path.setAttribute('opacity',selId?'0.06':'0.4');
+      path.setAttribute('opacity',selId?'0.06':'0.65');
       path.setAttribute('stroke-width','1.5');
       elabel.style.display='none';
     });
@@ -499,7 +593,7 @@ function closePanel(){
     el.style.boxShadow='';
   });
   document.querySelectorAll('.ep').forEach(el=>{
-    el.setAttribute('opacity','0.4');
+    el.setAttribute('opacity','0.65');
     el.setAttribute('stroke-width','1.5');
   });
 }
@@ -535,14 +629,43 @@ function showPanel(node){
     seenLabels.add(ee.label);return true;
   }).map(ee=>'<span class="p-tag" style="background:'+hexRgb(ee.stroke,.12)+';color:'+ee.stroke+';border:1px solid '+hexRgb(ee.stroke,.3)+'">'+e(ee.label)+'</span>').join('');
 
+  const linkedDocs=DOCS.filter(d=>d.linkedNodeIds.includes(node.id));
+  const docsHtml=linkedDocs.length
+    ?'<div class="p-sec">문서 ('+linkedDocs.length+')</div>'+
+      linkedDocs.map(d=>{
+        const hasContent=d.content!=null&&d.content.trim().length>0;
+        const arrow=hasContent?'<span class="p-doc-arrow">›</span>':'';
+        return'<div class="p-doc" data-doc-id="'+e(d.id)+'" style="'+(hasContent?'':'cursor:default')+'">'
+          +'<div class="p-dot" style="background:#6b7280"></div>'
+          +'<span class="p-cname">📄 '+e(d.title)+'</span>'
+          +arrow+'</div>'
+          +(hasContent?'<div class="p-doc-body" id="db-'+e(d.id)+'">'
+            +'<div class="p-doc-md">'+renderMd(d.content)+'</div>'
+            +'</div>':'');
+      }).join('')
+    :'';
+
   pbody.innerHTML=
     '<div><span class="p-badge" style="background:'+hexRgb(color,.12)+';color:'+color+';border:1px solid '+hexRgb(color,.25)+'">'+e(label)+'</span>&nbsp;'+statusHtml+'</div>'+
     '<div class="p-title">'+e(node.title)+'</div>'+
     (node.description?'<div class="p-desc">'+e(node.description)+'</div>':'')+
     connsHtml+
-    (tagsHtml?'<div class="p-sec">관계 타입</div>'+tagsHtml:'');
+    (tagsHtml?'<div class="p-sec">관계 타입</div>'+tagsHtml:'')+
+    docsHtml;
 
   panel.classList.add('open');
+
+  // Accordion toggle for doc items with content
+  pbody.querySelectorAll('.p-doc[data-doc-id]').forEach(el=>{
+    const did=el.getAttribute('data-doc-id');
+    const body=document.getElementById('db-'+did);
+    if(!body)return;
+    el.addEventListener('click',()=>{
+      const open=body.classList.toggle('open');
+      const arrow=el.querySelector('.p-doc-arrow');
+      if(arrow)arrow.classList.toggle('open',open);
+    });
+  });
 }
 
 // ── Pan / Zoom ─────────────────────────────────────────────────────────────
@@ -593,6 +716,10 @@ renderGroups();
 renderEdges();
 renderNodes();
 fitView();
+}catch(err){
+  document.body.style.cssText='display:flex;align-items:center;justify-content:center;height:100vh;background:#030810;color:#ef4444;font-family:monospace;text-align:center;padding:40px';
+  document.body.innerHTML='<div><div style="font-size:18px;font-weight:700;margin-bottom:12px">Export rendering error</div><div style="font-size:12px;color:#9ca3af;white-space:pre-wrap">'+err.message+'</div></div>';
+}
 })();
 </script>
 </body>

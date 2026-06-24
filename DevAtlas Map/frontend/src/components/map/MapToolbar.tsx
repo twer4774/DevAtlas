@@ -29,6 +29,7 @@ import { Button } from '@/components/common/Button'
 import { RelationTypeManager } from './RelationTypeManager'
 import { NODE_TYPES, INFRA_TYPES, getNodeTypeLabel, NODE_TYPE_COLORS, type NodeType } from '@/lib/constants'
 import { generateExportHtml } from '@/lib/exportHtml'
+import { buildLayout } from '@/lib/nodeLayout'
 import { cn } from '@/lib/cn'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -150,10 +151,34 @@ export function MapToolbar({ versionId }: Props) {
     setAddOpen(false)
   }
 
-  const handleExportHtml = () => {
-    const rfNodes = getNodes()
-    const rfEdges = getEdges()
-    const html = generateExportHtml(rfNodes, rfEdges, 'Architecture Map')
+  const handleExportHtml = async () => {
+    // Build layout with ALL nodes expanded so collapsed children are included
+    const allExpandedIds = new Set((nodes ?? []).map(n => n.id))
+    const { nodes: rfNodes, edges: rfEdges } = buildLayout(
+      nodes ?? [],
+      edges ?? [],
+      allExpandedIds,
+      false,
+      new Set(),       // show all edge types in export
+      null,
+      relationTypes,
+    )
+    // Fetch markdown content for each document at export time
+    const docsWithContent = await Promise.all(
+      (docs ?? []).map(async d => {
+        const content = d.content_url
+          ? await fetch(`/api/documents/${d.id}/raw`)
+              .then(r => {
+                const ct = r.headers.get('content-type') ?? ''
+                if (!r.ok || ct.includes('text/html')) return null
+                return r.text()
+              })
+              .catch(() => null)
+          : null
+        return { ...d, content }
+      })
+    )
+    const html = generateExportHtml(rfNodes, rfEdges, docsWithContent, 'Architecture Map')
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

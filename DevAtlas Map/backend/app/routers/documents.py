@@ -1,9 +1,12 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
+from app.core.s3 import get_s3_client
+from app.config import settings
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentResponse
 from app.services import document_service
 
@@ -70,6 +73,18 @@ async def update_document_content(
     return await document_service.update_document_content(
         db, doc_id, file_bytes, file.content_type or "text/markdown"
     )
+
+
+@router.get("/documents/{doc_id}/raw")
+async def get_document_raw(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    doc = await document_service.get_document(db, doc_id)
+    if not doc.content_url:
+        return Response(content="", media_type="text/plain")
+    s3 = get_s3_client()
+    obj = s3.get_object(Bucket=settings.s3_bucket, Key=doc.content_url)
+    content = obj["Body"].read()
+    content_type = obj.get("ContentType", "text/markdown")
+    return Response(content=content, media_type=content_type)
 
 
 @router.delete("/documents/{doc_id}", status_code=204)
