@@ -4,6 +4,7 @@ import { useHistoryStore } from '@/store/historyStore'
 import { useToastStore } from '@/store/toastStore'
 import { nodesApi } from '@/api/nodes'
 import { edgesApi } from '@/api/edges'
+import type { NodeEdge } from '@/types'
 
 export function useHistory() {
   const { undo: popUndo, redo: popRedo, canUndo, canRedo, replaceTopFuture } = useHistoryStore()
@@ -43,9 +44,30 @@ export function useHistory() {
       }
     }
 
+    if (entry.kind === 'node_created') {
+      try {
+        await nodesApi.delete(entry.nodeId, 'undo create', 'user')
+        qc.invalidateQueries({ queryKey: ['nodes', entry.versionId] })
+        addToast('노드 생성이 취소되었습니다', 'info')
+      } catch {
+        addToast('실행 취소 실패', 'error')
+      }
+    }
+
     if (entry.kind === 'edge_created') {
       try {
+        // Fetch snapshot before deleting so redo can recreate the edge
+        const edges = qc.getQueryData<NodeEdge[]>(['edges', entry.versionId])
+        const snap = edges?.find(e => e.id === entry.edgeId)
         await edgesApi.delete(entry.edgeId)
+        if (snap) {
+          replaceTopFuture({
+            kind: 'edge_deleted',
+            versionId: entry.versionId,
+            edgeId: entry.edgeId,
+            snapshot: { source_id: snap.source_id, target_id: snap.target_id, relation_type: snap.relation_type },
+          })
+        }
         qc.invalidateQueries({ queryKey: ['edges', entry.versionId] })
         addToast('엣지 생성이 취소되었습니다', 'info')
       } catch {
@@ -102,7 +124,22 @@ export function useHistory() {
         addToast('다시 실행 실패', 'error')
       }
     }
-  }, [popRedo, qc, addToast])
+
+    if (entry.kind === 'edge_deleted') {
+      try {
+        const newEdge = await edgesApi.create(entry.versionId, {
+          source_id: entry.snapshot.source_id,
+          target_id: entry.snapshot.target_id,
+          relation_type: entry.snapshot.relation_type,
+        })
+        replaceTopFuture({ kind: 'edge_created', versionId: entry.versionId, edgeId: newEdge.id })
+        qc.invalidateQueries({ queryKey: ['edges', entry.versionId] })
+        addToast('다시 실행됨', 'info')
+      } catch {
+        addToast('다시 실행 실패', 'error')
+      }
+    }
+  }, [popRedo, replaceTopFuture, qc, addToast])
 
   return { undo, redo, canUndo, canRedo }
 }
