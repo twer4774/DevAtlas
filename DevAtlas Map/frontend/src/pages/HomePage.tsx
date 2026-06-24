@@ -22,6 +22,7 @@ export function HomePage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [creator, setCreator] = useState('')
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const handleCreate = async () => {
     if (!name.trim() || !creator.trim()) return
@@ -78,7 +79,7 @@ export function HomePage() {
                 <div className="flex items-start justify-between">
                   <Folder size={18} className="text-blue-400 mt-0.5" />
                   <button
-                    onClick={(e) => { e.stopPropagation(); deleteProject.mutate(p.id) }}
+                    onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(p.id) }}
                     className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all p-1 rounded"
                   >
                     <Trash2 size={13} />
@@ -131,6 +132,23 @@ export function HomePage() {
             <Button variant="ghost" size="sm" onClick={() => setCreateOpen(false)}>취소</Button>
             <Button size="sm" onClick={handleCreate} disabled={createProject.isPending || !name || !creator}>
               생성
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={deleteConfirmId !== null} onClose={() => setDeleteConfirmId(null)} title="프로젝트 삭제">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-300">삭제하면 모든 버전과 데이터가 사라집니다. 계속하시겠습니까?</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmId(null)}>취소</Button>
+            <Button variant="danger" size="sm" onClick={() => {
+              if (deleteConfirmId) {
+                deleteProject.mutate(deleteConfirmId)
+                setDeleteConfirmId(null)
+              }
+            }} disabled={deleteProject.isPending}>
+              삭제
             </Button>
           </div>
         </div>
