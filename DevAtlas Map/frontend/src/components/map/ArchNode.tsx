@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import {
   Layers, Target, Zap, Shield, ExternalLink,
@@ -52,8 +52,9 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as ArchNodeData
   const { node, hasChildren, childCount, isAncestorHighlighted } = nodeData
-  const { expandedNodeIds, toggleExpand } = useMapStore()
+  const { expandedNodeIds, toggleExpand, selectedNode } = useMapStore()
   const { isDiffMode, diffResult } = useDiffStore()
+  const [nodeHovered, setNodeHovered] = useState(false)
 
   const isExpanded = expandedNodeIds.has(node.id)
   const typeColor = getNodeTypeColor(node.type)
@@ -97,6 +98,9 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
       ? '0 0 16px rgba(251,146,60,0.2), 0 4px 16px rgba(0,0,0,0.4)'
       : '0 4px 20px rgba(0,0,0,0.4)'
 
+  const isDimmedBySelection = selectedNode !== null && selectedNode.id !== node.id
+  const nodeOpacity = (isDimmedBySelection && !nodeHovered) ? 0.5 : 1
+
   return (
     <div
       className={cn(
@@ -107,7 +111,11 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
         background: diffBg || `linear-gradient(145deg, ${typeColor}12 0%, #0d1117 55%)`,
         border,
         boxShadow,
+        opacity: nodeOpacity,
+        transition: 'opacity 0.2s',
       }}
+      onMouseEnter={() => setNodeHovered(true)}
+      onMouseLeave={() => setNodeHovered(false)}
     >
       {/* Top accent bar */}
       <div

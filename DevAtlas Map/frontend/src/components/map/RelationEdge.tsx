@@ -6,6 +6,7 @@ import {
   useReactFlow,
   type EdgeProps,
 } from '@xyflow/react'
+import { useMapStore } from '@/store/mapStore'
 
 // Computes a bezier path with control points shifted perpendicular to the
 // source→target direction. Endpoints stay at the handles; only the curve
@@ -47,6 +48,8 @@ function getOffsetBezierPath(
 
 export function RelationEdge({
   id,
+  source,
+  target,
   sourceX, sourceY, targetX, targetY,
   sourcePosition, targetPosition,
   style,
@@ -56,6 +59,7 @@ export function RelationEdge({
   data,
 }: EdgeProps) {
   const { screenToFlowPosition } = useReactFlow()
+  const { selectedNode } = useMapStore()
   const [hovered, setHovered] = useState(false)
   const [mouseFlowPos, setMouseFlowPos] = useState<{ x: number; y: number } | null>(null)
 
@@ -69,6 +73,14 @@ export function RelationEdge({
   const s = (style ?? {}) as React.CSSProperties
   const stroke = s.stroke as string | undefined
   const strokeDasharray = s.strokeDasharray as string | undefined
+
+  const isNodeSelected = selectedNode !== null
+  const isConnected = !isNodeSelected || source === selectedNode?.id || target === selectedNode?.id
+  const opacity = active ? 1 : (isNodeSelected ? (isConnected ? 0.9 : 0.06) : 0.4)
+  const strokeWidth = active ? 2.5 : (isNodeSelected && isConnected ? 2 : 1.5)
+  const edgeFilter = isNodeSelected && isConnected && !active
+    ? `drop-shadow(0 0 4px ${stroke ?? '#6b7280'}55)`
+    : undefined
 
   const handleMouseEnter = useCallback((e: React.MouseEvent) => {
     setHovered(true)
@@ -95,10 +107,11 @@ export function RelationEdge({
         markerEnd={markerEnd}
         style={{
           stroke,
-          strokeWidth: active ? 2 : 1.5,
+          strokeWidth,
           strokeDasharray,
-          opacity: active ? 1 : 0.4,
-          transition: 'opacity 0.15s, stroke-width 0.15s',
+          opacity,
+          filter: edgeFilter,
+          transition: 'opacity 0.2s, stroke-width 0.15s, filter 0.2s',
           pointerEvents: 'none',
         }}
       />
