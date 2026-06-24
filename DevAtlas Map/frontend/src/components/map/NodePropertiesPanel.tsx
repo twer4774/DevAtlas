@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Save, FileText, Settings2, ArrowLeft, Edit2, Search, Plus, FolderOpen, LayoutDashboard } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { useNodes, useUpdateNode } from '@/hooks/useNodes'
@@ -173,18 +173,36 @@ export function NodePropertiesPanel({ projectId, versionId }: Props) {
   const [status, setStatus] = useState<NodeStatus | ''>('')
   const [description, setDescription] = useState('')
 
+  const prevNodeIdRef = useRef<string | null>(null)
+
   const node = nodes?.find(n => n.id === selectedNodeId)
   const childCount = selectedNodeId ? (edges ?? []).filter(e => e.source_id === selectedNodeId).length : 0
 
   useEffect(() => {
     if (node && node.type !== 'group') {
+      const prevId = prevNodeIdRef.current
+      // 이전 노드가 있고, 편집 중이었고, 노드가 바뀌었을 때
+      if (prevId && prevId !== node.id && editing) {
+        const confirmed = window.confirm('저장하지 않은 변경 사항이 있습니다. 저장하시겠습니까?')
+        if (confirmed) {
+          // 현재 편집 중인 값(title/type/status/description state)으로 이전 노드 저장
+          updateNode.mutate({
+            id: prevId,
+            title,
+            type,
+            metadata_: { status: status || undefined, description: description || undefined },
+            author: 'user',
+          })
+        }
+      }
+      prevNodeIdRef.current = node.id
       setTitle(node.title)
       setType(node.type)
       setStatus((node.metadata_?.status as NodeStatus) ?? '')
       setDescription((node.metadata_?.description as string) ?? '')
       setEditing(false)
     }
-  }, [node?.id])
+  }, [node?.id]) // eslint-disable-line
 
   // ── 문서 보기 / 편집 오버레이 ──────────────────────────────────────────────
   if (activePanelView === 'view' && activeDocumentId) {
