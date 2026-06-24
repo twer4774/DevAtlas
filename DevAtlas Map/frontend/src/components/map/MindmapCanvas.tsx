@@ -204,6 +204,7 @@ function FlowInner({ versionId }: { versionId: string }) {
   const {
     expandedNodeIds, setSelectedNode, toggleExpand,
     drillRootId, pendingAutoLayout, clearAutoLayout,
+    pendingFocusNodeId, setPendingFocusNode,
   } = useMapStore()
   const { setActiveDocument } = useDocumentStore()
 
@@ -573,6 +574,34 @@ function FlowInner({ versionId }: { versionId: string }) {
     },
     [getNode, setCenter, setSelectedNode],
   )
+
+  useEffect(() => {
+    if (!pendingFocusNodeId) return
+    const rfNode = getNode(pendingFocusNodeId)
+    if (!rfNode) {
+      // Node not yet rendered — retry after a short delay
+      const t = setTimeout(() => {
+        const node = getNode(pendingFocusNodeId)
+        if (node) {
+          const w = node.measured?.width ?? 210
+          const h = node.measured?.height ?? 110
+          const parentNode = node.parentId ? getNode(node.parentId) : null
+          const absX = parentNode ? parentNode.position.x + node.position.x : node.position.x
+          const absY = parentNode ? parentNode.position.y + node.position.y : node.position.y
+          setCenter(absX + w / 2, absY + h / 2, { duration: 400, zoom: 1.4 })
+        }
+        setPendingFocusNode(null)
+      }, 300)
+      return () => clearTimeout(t)
+    }
+    const w = rfNode.measured?.width ?? 210
+    const h = rfNode.measured?.height ?? 110
+    const parentNode = rfNode.parentId ? getNode(rfNode.parentId) : null
+    const absX = parentNode ? parentNode.position.x + rfNode.position.x : rfNode.position.x
+    const absY = parentNode ? parentNode.position.y + rfNode.position.y : rfNode.position.y
+    setCenter(absX + w / 2, absY + h / 2, { duration: 400, zoom: 1.4 })
+    setPendingFocusNode(null)
+  }, [pendingFocusNodeId, getNode, setCenter, setPendingFocusNode])
 
   const miniMapNodeColor = useCallback((rfNode: Node) => {
     const archNode = (rfNode.data as { node: ArchitectureNode }).node

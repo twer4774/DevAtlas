@@ -11,6 +11,7 @@ interface MapState {
   drillRootId: string | null
   drillPath: DrillCrumb[]
   pendingAutoLayout: boolean
+  pendingFocusNodeId: string | null
   setSelectedNode: (id: string | null) => void
   toggleExpand: (id: string) => void
   expandAll: (ids: string[]) => void
@@ -20,6 +21,7 @@ interface MapState {
   exitToRoot: () => void
   triggerAutoLayout: () => void
   clearAutoLayout: () => void
+  setPendingFocusNode: (id: string | null) => void
 }
 
 export const useMapStore = create<MapState>((set) => ({
@@ -28,6 +30,7 @@ export const useMapStore = create<MapState>((set) => ({
   drillRootId: null,
   drillPath: [],
   pendingAutoLayout: false,
+  pendingFocusNodeId: null,
   setSelectedNode: (id) => set({ selectedNodeId: id }),
   toggleExpand: (id) =>
     set((state) => {
@@ -55,4 +58,5 @@ export const useMapStore = create<MapState>((set) => ({
   exitToRoot: () => set({ drillRootId: null, drillPath: [] }),
   triggerAutoLayout: () => set({ pendingAutoLayout: true }),
   clearAutoLayout: () => set({ pendingAutoLayout: false }),
+  setPendingFocusNode: (id) => set({ pendingFocusNodeId: id }),
 }))

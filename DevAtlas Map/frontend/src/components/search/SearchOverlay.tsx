@@ -13,7 +13,7 @@ export function SearchOverlay() {
   const { searchOpen, closeSearch } = useUIStore()
   const { activeProjectId, setActiveVersion } = useProjectStore()
   const { setActiveDocument } = useDocumentStore()
-  const { setSelectedNode } = useMapStore()
+  const { setSelectedNode, setPendingFocusNode } = useMapStore()
   const navigate = useNavigate()
   const [q, setQ] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -44,6 +44,7 @@ export function SearchOverlay() {
   const handleNodeClick = (result: { id: string; version_id: string }) => {
     setActiveVersion(result.version_id)
     setSelectedNode(result.id)
+    setPendingFocusNode(result.id)
     closeSearch()
   }
 
