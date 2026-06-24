@@ -28,7 +28,7 @@ export const GroupAreaNode = memo(({ data, selected }: NodeProps) => {
   const [draftTitle, setDraftTitle] = useState(node.title)
   const updateNode = useUpdateNode(node.version_id)
   const deleteNode = useDeleteNode(node.version_id)
-  const { setSelectedNode, enterDrillDown } = useMapStore()
+  const { setSelectedNode, enterDrillDown, drillRootId } = useMapStore()
 
   const saveTitle = () => {
     if (draftTitle.trim() && draftTitle !== node.title) {
@@ -95,8 +95,8 @@ export const GroupAreaNode = memo(({ data, selected }: NodeProps) => {
             </span>
           )}
 
-          {/* 집중해서 보기 — hover 시 표시 */}
-          {!editing && (
+          {/* 집중해서 보기 — hover 시 표시, 이미 드릴된 그룹이면 숨김 */}
+          {!editing && drillRootId !== node.id && (
             <button
               className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded opacity-0 group-hover:opacity-100 transition-all"
               style={{ color: color.text + '99' }}
