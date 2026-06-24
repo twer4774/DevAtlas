@@ -20,5 +20,9 @@ export const documentsApi = {
     }).then((r) => r.data),
   update: (id: string, data: { title?: string; type?: string; linked_node_ids?: string[] }) =>
     client.patch<Document>(`/documents/${id}`, data).then((r) => r.data),
+  updateContent: (id: string, formData: FormData) =>
+    client.put<Document>(`/documents/${id}/content`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data),
   delete: (id: string) => client.delete(`/documents/${id}`),
 }

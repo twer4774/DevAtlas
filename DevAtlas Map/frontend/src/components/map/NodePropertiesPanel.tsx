@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
-import { Save, FileText, Settings2, ArrowLeft, Edit2, Search, Plus, FolderOpen, LayoutDashboard } from 'lucide-react'
+import { Save, FileText, Settings2, ArrowLeft, Edit2, Search, Plus, FolderOpen, LayoutDashboard, Trash2 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { useNodes, useUpdateNode } from '@/hooks/useNodes'
 import { useEdges } from '@/hooks/useEdges'
-import { useNodeDocuments, useVersionDocuments } from '@/hooks/useDocuments'
+import { useNodeDocuments, useVersionDocuments, useDeleteDocument } from '@/hooks/useDocuments'
 import { useDocumentStore } from '@/store/documentStore'
 import { DocumentEditor } from '@/components/document/DocumentEditor'
 import { DocumentViewer } from '@/components/document/DocumentViewer'
 import { DocTypeBadge, NodeTypeBadge } from '@/components/common/Badge'
 import { Button } from '@/components/common/Button'
+import { Modal } from '@/components/common/Modal'
 import { Spinner } from '@/components/common/Spinner'
 import { cn } from '@/lib/cn'
 import {
@@ -46,6 +47,15 @@ function DocList({
   onSelect: (id: string) => void
   onNew: () => void
 }) {
+  const deleteDocument = useDeleteDocument()
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+
+  const handleDelete = async () => {
+    if (!pendingDeleteId) return
+    await deleteDocument.mutateAsync(pendingDeleteId)
+    setPendingDeleteId(null)
+  }
+
   return (
     <>
       <div className="flex justify-end px-3 py-1.5 border-b border-gray-800/50">
@@ -67,12 +77,19 @@ function DocList({
           {docs?.map(doc => (
             <div
               key={doc.id}
-              className="px-3 py-2.5 border-b border-gray-800/50 hover:bg-gray-800/40 cursor-pointer transition-colors"
+              className="group px-3 py-2.5 border-b border-gray-800/50 hover:bg-gray-800/40 cursor-pointer transition-colors"
               onClick={() => onSelect(doc.id)}
             >
               <div className="flex items-center gap-2">
                 <DocTypeBadge type={doc.type} />
                 <span className="text-sm text-gray-200 truncate flex-1">{doc.title}</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setPendingDeleteId(doc.id) }}
+                  className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all p-0.5 rounded flex-shrink-0"
+                  title="문서 삭제"
+                >
+                  <Trash2 size={12} />
+                </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 {formatDistanceToNow(new Date(doc.updated_at), { addSuffix: true, locale: ko })}
@@ -81,6 +98,18 @@ function DocList({
           ))}
         </>
       )}
+
+      <Modal open={!!pendingDeleteId} onClose={() => setPendingDeleteId(null)} title="문서 삭제">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-300">삭제하면 복구할 수 없습니다. 계속하시겠습니까?</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setPendingDeleteId(null)}>취소</Button>
+            <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleteDocument.isPending}>
+              삭제
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   )
 }

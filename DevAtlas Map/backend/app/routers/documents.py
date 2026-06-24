@@ -60,6 +60,18 @@ async def update_document(doc_id: uuid.UUID, data: DocumentUpdate, db: AsyncSess
     return await document_service.update_document(db, doc_id, data)
 
 
+@router.put("/documents/{doc_id}/content", response_model=DocumentResponse)
+async def update_document_content(
+    doc_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    file_bytes = await file.read()
+    return await document_service.update_document_content(
+        db, doc_id, file_bytes, file.content_type or "text/markdown"
+    )
+
+
 @router.delete("/documents/{doc_id}", status_code=204)
 async def delete_document(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     await document_service.delete_document_record(db, doc_id)

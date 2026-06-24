@@ -73,6 +73,24 @@ async def update_document(db: AsyncSession, doc_id: uuid.UUID, data: DocumentUpd
     return doc
 
 
+async def update_document_content(
+    db: AsyncSession,
+    doc_id: uuid.UUID,
+    file_bytes: bytes,
+    content_type: str = "text/markdown",
+) -> Document:
+    doc = await get_document(db, doc_id)
+    old_key = doc.content_url
+    new_key = f"{doc.project_id}/{uuid.uuid4()}"
+    upload_document(file_bytes, content_type, new_key)
+    if old_key:
+        delete_document(old_key)
+    doc.content_url = new_key
+    await db.commit()
+    await db.refresh(doc)
+    return doc
+
+
 async def delete_document_record(db: AsyncSession, doc_id: uuid.UUID) -> None:
     doc = await get_document(db, doc_id)
     if doc.content_url:

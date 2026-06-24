@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useQueryClient } from '@tanstack/react-query'
@@ -7,7 +7,7 @@ import { documentsApi } from '@/api/documents'
 import { useDocumentStore } from '@/store/documentStore'
 import { Button } from '@/components/common/Button'
 import { Spinner } from '@/components/common/Spinner'
-import { DOC_TYPES } from '@/lib/constants'
+import { DOC_TYPES, DOC_TYPE_LABELS } from '@/lib/constants'
 import { cn } from '@/lib/cn'
 
 interface Props {
@@ -21,34 +21,86 @@ export function DocumentEditor({ docId, projectId, versionId, linkedNodeId }: Pr
   const { data: doc, isLoading } = useDocument(docId)
   const { setActiveDocument, setView } = useDocumentStore()
   const qc = useQueryClient()
-  const [title, setTitle] = useState(doc?.title ?? '')
-  const [type, setType] = useState(doc?.type ?? 'planning')
+
+  const [title, setTitle] = useState('')
+  const [type, setType] = useState('planning')
   const [content, setContent] = useState('')
+  const [originalContent, setOriginalContent] = useState('')
+  const [contentLoading, setContentLoading] = useState(false)
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [saving, setSaving] = useState(false)
 
-  if (isLoading) return <Spinner className="mx-auto mt-6" />
+  // 기존 문서 로드: title/type 초기화
+  useEffect(() => {
+    if (doc) {
+      setTitle(doc.title)
+      setType(doc.type)
+    }
+  }, [doc?.id]) // eslint-disable-line
+
+  // 기존 문서 로드: S3에서 마크다운 내용 fetch
+  useEffect(() => {
+    if (!doc?.content_url) return
+    setContentLoading(true)
+    fetch(doc.content_url)
+      .then((r) => r.text())
+      .then((text) => {
+        setContent(text)
+        setOriginalContent(text)
+      })
+      .catch(() => {
+        setContent('')
+        setOriginalContent('')
+      })
+      .finally(() => setContentLoading(false))
+  }, [doc?.content_url])
+
+  // 새 문서 모드(docId 없음) 진입 시 상태 초기화
+  useEffect(() => {
+    if (!docId) {
+      setTitle('')
+      setType('planning')
+      setContent('')
+      setOriginalContent('')
+    }
+  }, [docId])
 
   const handleSave = async () => {
     if (!title.trim()) return
     setSaving(true)
     try {
-      const blob = new Blob([content], { type: 'text/markdown' })
-      const formData = new FormData()
-      formData.append('project_id', projectId)
-      formData.append('version_id', versionId)
-      formData.append('type', type)
-      formData.append('title', title)
-      formData.append('linked_node_ids', JSON.stringify(linkedNodeId ? [linkedNodeId] : []))
-      formData.append('file', blob, 'document.md')
-      const newDoc = await documentsApi.upload(formData)
-      qc.invalidateQueries({ queryKey: ['documents'] })
-      setActiveDocument(newDoc.id)
-      setView('view')
+      if (docId) {
+        // 기존 문서 수정
+        await documentsApi.update(docId, { title, type })
+        if (content !== originalContent) {
+          const blob = new Blob([content], { type: 'text/markdown' })
+          const formData = new FormData()
+          formData.append('file', blob, 'document.md')
+          await documentsApi.updateContent(docId, formData)
+        }
+        await qc.invalidateQueries({ queryKey: ['documents'] })
+        setView('view')
+      } else {
+        // 새 문서 생성
+        const blob = new Blob([content], { type: 'text/markdown' })
+        const formData = new FormData()
+        formData.append('project_id', projectId)
+        formData.append('version_id', versionId)
+        formData.append('type', type)
+        formData.append('title', title)
+        formData.append('linked_node_ids', JSON.stringify(linkedNodeId ? [linkedNodeId] : []))
+        formData.append('file', blob, 'document.md')
+        const newDoc = await documentsApi.upload(formData)
+        await qc.invalidateQueries({ queryKey: ['documents'] })
+        setActiveDocument(newDoc.id)
+        setView('view')
+      }
     } finally {
       setSaving(false)
     }
   }
+
+  if (isLoading || contentLoading) return <Spinner className="mx-auto mt-6" />
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -58,13 +110,16 @@ export function DocumentEditor({ docId, projectId, versionId, linkedNodeId }: Pr
           placeholder="문서 제목"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          autoFocus
         />
         <select
           className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white focus:outline-none"
           value={type}
           onChange={(e) => setType(e.target.value)}
         >
-          {DOC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          {DOC_TYPES.map((t) => (
+            <option key={t} value={t}>{DOC_TYPE_LABELS[t]}</option>
+          ))}
         </select>
       </div>
 
