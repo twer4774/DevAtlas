@@ -3,7 +3,7 @@ import { Save, FileText, Settings2, ArrowLeft, Edit2, Search, Plus, FolderOpen, 
 import { useMapStore } from '@/store/mapStore'
 import { useNodes, useUpdateNode } from '@/hooks/useNodes'
 import { useEdges, useUpdateEdge, useDeleteEdge } from '@/hooks/useEdges'
-import { useNodeDocuments, useVersionDocuments, useDeleteDocument } from '@/hooks/useDocuments'
+import { useDocument, useNodeDocuments, useVersionDocuments, useDeleteDocument } from '@/hooks/useDocuments'
 import { useDocumentStore } from '@/store/documentStore'
 import { useRelationTypeStore } from '@/store/relationTypeStore'
 import { DocumentEditor } from '@/components/document/DocumentEditor'
@@ -305,6 +305,15 @@ export function NodePropertiesPanel({ projectId, versionId }: Props) {
   const { data: edges } = useEdges(versionId)
   const updateNode = useUpdateNode(versionId)
   const { data: nodeDocs, isLoading: docsLoading } = useNodeDocuments(selectedNodeId)
+  const { data: viewingDoc } = useDocument(activeDocumentId)
+
+  // 문서 뷰 모드 진입 시 연결된 노드로 자동 포커스
+  useEffect(() => {
+    if (activePanelView !== 'view') return
+    if (!viewingDoc?.linked_node_ids?.length) return
+    setSelectedNode(viewingDoc.linked_node_ids[0])
+    setPendingFocusNode(viewingDoc.linked_node_ids[0])
+  }, [viewingDoc?.id, activePanelView]) // eslint-disable-line
 
   const [tab, setTab] = useState<Tab>('props')
   const [editing, setEditing] = useState(false)
