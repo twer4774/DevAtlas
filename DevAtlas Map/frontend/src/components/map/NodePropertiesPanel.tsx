@@ -375,6 +375,18 @@ export function NodePropertiesPanel({ projectId, versionId }: Props) {
               <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">ID</label>
               <p className="text-[11px] text-gray-600 font-mono break-all">{node.id}</p>
             </div>
+            {node.metadata_?.port && (
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">PORT</label>
+                <p className="text-xs text-gray-400 font-mono">{String(node.metadata_.port)}</p>
+              </div>
+            )}
+            {node.metadata_?.tech && (
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">TECH</label>
+                <p className="text-xs text-gray-400">{String(node.metadata_.tech)}</p>
+              </div>
+            )}
             {childCount > 0 && (
               <div>
                 <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">하위 노드</label>
