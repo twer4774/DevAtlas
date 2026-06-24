@@ -344,10 +344,21 @@ export function buildLayout(
         animated,
         label: displayLabel,
         style: { stroke, strokeWidth: 1.5, strokeDasharray },
+        markerEnd: { type: 'arrowclosed', color: stroke, width: 12, height: 12 },
         deletable: true,
-        data: { relation_type: e.relation_type },
+        data: { relation_type: e.relation_type, stroke },
       }
     })
+
+  // Detect bidirectional pairs and apply perpendicular offset so they don't overlap
+  const pairKeySet = new Set(rfEdges.map(e => `${e.source}→${e.target}`))
+  rfEdges.forEach(e => {
+    if (pairKeySet.has(`${e.target}→${e.source}`)) {
+      const isFirst = e.source < e.target
+      const d = e.data as Record<string, unknown>
+      e.data = { ...d, parallelOffset: isFirst ? -22 : 22 }
+    }
+  })
 
   return { nodes: rfNodes, edges: rfEdges, groupDimensions: computedGroupDims }
 }
