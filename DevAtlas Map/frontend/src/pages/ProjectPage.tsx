@@ -11,6 +11,8 @@ import { useProject } from '@/hooks/useProjects'
 import { useVersion } from '@/hooks/useVersions'
 import { useUIStore } from '@/store/uiStore'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { useDocumentStore } from '@/store/documentStore'
+import { useMapStore } from '@/store/mapStore'
 import { LeftPanel } from '@/components/layout/LeftPanel'
 import { CenterPanel } from '@/components/layout/CenterPanel'
 import { RightPanel } from '@/components/layout/RightPanel'
@@ -22,10 +24,17 @@ export function ProjectPage() {
   const { data: project } = useProject(projectId ?? null)
   const { data: activeVersion } = useVersion(activeVersionId)
   const { openSearch } = useUIStore()
+  const { reset: resetDocs } = useDocumentStore()
+  const { setSelectedNode, setSelectedEdge } = useMapStore()
 
   useEffect(() => {
-    if (projectId) setActiveProject(projectId)
-  }, [projectId, setActiveProject])
+    if (projectId) {
+      setActiveProject(projectId)
+      resetDocs()
+      setSelectedNode(null)
+      setSelectedEdge(null)
+    }
+  }, [projectId]) // eslint-disable-line
 
   useKeyboardShortcuts(activeVersionId)
 

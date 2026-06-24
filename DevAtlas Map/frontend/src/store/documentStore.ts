@@ -8,6 +8,7 @@ interface DocumentState {
   setActiveDocument: (id: string | null) => void
   setView: (view: PanelView) => void
   startNewDocument: () => void
+  reset: () => void
 }
 
 export const useDocumentStore = create<DocumentState>((set) => ({
@@ -16,4 +17,5 @@ export const useDocumentStore = create<DocumentState>((set) => ({
   setActiveDocument: (id) => set({ activeDocumentId: id, activePanelView: id ? 'view' : 'list' }),
   setView: (view) => set({ activePanelView: view }),
   startNewDocument: () => set({ activeDocumentId: null, activePanelView: 'edit' }),
+  reset: () => set({ activePanelView: 'list', activeDocumentId: null }),
 }))

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import {
   ZoomIn, ZoomOut, Maximize2, ChevronsDown, ChevronsRight,
-  Plus, Undo2, Redo2, LayoutGrid, Keyboard, Filter, Settings2, LayoutDashboard,
+  Plus, Undo2, Redo2, LayoutGrid, Keyboard, Filter, Settings2, LayoutDashboard, FileText,
 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { useEdgeFilterStore } from '@/store/edgeFilterStore'
@@ -10,6 +10,9 @@ import { useRelationTypeStore } from '@/store/relationTypeStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNodes as useNodesData, useCreateNode, useUpdateNode } from '@/hooks/useNodes'
 import { useEdges } from '@/hooks/useEdges'
+import { useVersionDocuments } from '@/hooks/useDocuments'
+import { useDocumentStore } from '@/store/documentStore'
+import { DocTypeBadge } from '@/components/common/Badge'
 import {
   PLACE_NODE_W,
   PLACE_NODE_H,
@@ -25,6 +28,8 @@ import { Button } from '@/components/common/Button'
 import { RelationTypeManager } from './RelationTypeManager'
 import { NODE_TYPES, INFRA_TYPES, getNodeTypeLabel } from '@/lib/constants'
 import { cn } from '@/lib/cn'
+import { formatDistanceToNow } from 'date-fns'
+import { ko } from 'date-fns/locale'
 
 /** 패딩: 영역 헤더 아래 첫 줄에 노드 두기 */
 const GROUP_INNER_X = 20
@@ -54,11 +59,16 @@ export function MapToolbar({ versionId }: Props) {
   const createNode = useCreateNode(versionId)
   const updateGroup = useUpdateNode(versionId)
   const { undo, redo, canUndo, canRedo } = useHistory()
+  const { data: docs } = useVersionDocuments(versionId)
+  const { setActiveDocument, startNewDocument } = useDocumentStore()
+  const { setSelectedNode, setPendingFocusNode } = useMapStore()
+
   const [addOpen, setAddOpen] = useState(false)
   const [addAreaOpen, setAddAreaOpen] = useState(false)
   const [shortcutOpen, setShortcutOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [manageOpen, setManageOpen] = useState(false)
+  const [docsOpen, setDocsOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [type, setType] = useState('Program')
   const [areaTitle, setAreaTitle] = useState('')
@@ -235,10 +245,99 @@ export function MapToolbar({ versionId }: Props) {
           <Plus size={15} />
         </button>
         <div className="w-px h-4 bg-gray-700 mx-1" />
+        <button
+          onClick={() => setDocsOpen(v => !v)}
+          className={cn('p-1.5 rounded transition-colors relative', docsOpen ? 'text-indigo-400' : 'text-gray-400 hover:text-white')}
+          title="문서 목록"
+        >
+          <FileText size={15} />
+          {docs && docs.length > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-indigo-500 text-[9px] font-bold text-white flex items-center justify-center">
+              {docs.length > 9 ? '9+' : docs.length}
+            </span>
+          )}
+        </button>
+        <div className="w-px h-4 bg-gray-700 mx-1" />
         <button onClick={() => setShortcutOpen(true)} className="p-1.5 text-gray-400 hover:text-white rounded transition-colors" title="단축키 목록">
           <Keyboard size={15} />
         </button>
       </div>
+
+      {/* 문서 패널 */}
+      {docsOpen && (
+        <div
+          className="absolute z-20 shadow-2xl rounded-xl overflow-hidden"
+          style={{
+            top: drillRootId ? '68px' : '54px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '340px',
+            maxHeight: '420px',
+            background: '#0d1117',
+            border: '1px solid #21262d',
+          }}
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#21262d' }}>
+            <div className="flex items-center gap-2">
+              <FileText size={14} style={{ color: '#6e7aff' }} />
+              <span className="text-sm font-semibold" style={{ color: '#e6edf3' }}>문서</span>
+              <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#1f2937', color: '#8b949e' }}>
+                {docs?.length ?? 0}
+              </span>
+            </div>
+            <button
+              onClick={startNewDocument}
+              className="flex items-center gap-1 text-xs transition-colors"
+              style={{ color: '#58a6ff' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#79b8ff')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#58a6ff')}
+            >
+              <Plus size={11} /> 새 문서
+            </button>
+          </div>
+
+          <div className="overflow-y-auto" style={{ maxHeight: '360px' }}>
+            {(!docs || docs.length === 0) && (
+              <div className="flex flex-col items-center justify-center py-8 gap-2">
+                <FileText size={20} style={{ color: '#30363d' }} />
+                <p className="text-xs" style={{ color: '#6e7681' }}>문서가 없습니다</p>
+              </div>
+            )}
+
+            {docs?.map(doc => (
+              <button
+                key={doc.id}
+                className="w-full flex items-start gap-3 px-4 py-3 text-left transition-all border-b"
+                style={{ borderColor: '#161b22', background: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#161b22')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => {
+                  setActiveDocument(doc.id)
+                  if (doc.linked_node_ids?.length) {
+                    setSelectedNode(doc.linked_node_ids[0])
+                    setPendingFocusNode(doc.linked_node_ids[0])
+                  }
+                  setDocsOpen(false)
+                }}
+              >
+                <DocTypeBadge type={doc.type} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: '#c9d1d9' }}>{doc.title}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: '#484f58' }}>
+                    {formatDistanceToNow(new Date(doc.updated_at), { addSuffix: true, locale: ko })}
+                    {doc.linked_node_ids?.length > 0 && (
+                      <span className="ml-1.5" style={{ color: '#3d6b9c' }}>
+                        노드 {doc.linked_node_ids.length}개 연결
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {/* 관계 타입 설정 모달 */}
       <Modal open={manageOpen} onClose={() => setManageOpen(false)} title="관계 타입 설정">

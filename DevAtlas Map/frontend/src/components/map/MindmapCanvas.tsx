@@ -202,7 +202,7 @@ function FlowInner({ versionId }: { versionId: string }) {
   const { hiddenTypes } = useEdgeFilterStore()
   const { types: relationTypes } = useRelationTypeStore()
   const {
-    expandedNodeIds, setSelectedNode, toggleExpand,
+    expandedNodeIds, setSelectedNode, setSelectedEdge, toggleExpand,
     drillRootId, pendingAutoLayout, clearAutoLayout,
     pendingFocusNodeId, setPendingFocusNode,
   } = useMapStore()
@@ -609,14 +609,27 @@ function FlowInner({ versionId }: { versionId: string }) {
     return getNodeTypeColor(archNode?.type ?? '') ?? '#374151'
   }, [])
 
+  const onEdgeClick = useCallback(
+    (_: React.MouseEvent, edge: RFEdge) => {
+      setSelectedEdge(edge.id)
+      setNodes(prev =>
+        prev.some(n => n.data.isAncestorHighlighted)
+          ? prev.map(n => n.data.isAncestorHighlighted ? { ...n, data: { ...n.data, isAncestorHighlighted: false } } : n)
+          : prev,
+      )
+    },
+    [setSelectedEdge, setNodes],
+  )
+
   const onPaneClick = useCallback(() => {
     setSelectedNode(null)
+    setSelectedEdge(null)
     setNodes(prev =>
       prev.some(n => n.data.isAncestorHighlighted)
         ? prev.map(n => n.data.isAncestorHighlighted ? { ...n, data: { ...n.data, isAncestorHighlighted: false } } : n)
         : prev,
     )
-  }, [setSelectedNode, setNodes])
+  }, [setSelectedNode, setSelectedEdge, setNodes])
 
   // ── 엣지 연결 — 타입 선택 모달 ────────────────────────────
   const onConnect = useCallback(
@@ -671,6 +684,7 @@ function FlowInner({ versionId }: { versionId: string }) {
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
         onConnect={onConnect}
         onEdgesDelete={onEdgesDelete}

@@ -25,6 +25,15 @@ export const useCreateEdge = (versionId: string) => {
   })
 }
 
+export const useUpdateEdge = (versionId: string) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, relation_type }: { id: string; relation_type: string }) =>
+      edgesApi.update(id, { relation_type }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['edges', versionId] }),
+  })
+}
+
 export const useDeleteEdge = (versionId: string) => {
   const qc = useQueryClient()
   const { push } = useHistoryStore()

@@ -25,10 +25,13 @@ export function VersionTree({ projectId }: Props) {
   const [deleteVersionId, setDeleteVersionId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
 
-  // 버전 목록 로드 후 activeVersion이 없으면 첫 번째 버전 자동 선택
+  // 버전 목록 로드 후 activeVersion이 없으면 가장 최신 버전 자동 선택
   useEffect(() => {
     if (!activeVersionId && versions && versions.length > 0) {
-      setActiveVersion(versions[0].id)
+      const latest = [...versions].sort(
+        (a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
+      )[0]
+      setActiveVersion(latest.id)
     }
   }, [versions, activeVersionId, setActiveVersion])
 

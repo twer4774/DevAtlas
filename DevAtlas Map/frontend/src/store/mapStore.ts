@@ -7,6 +7,7 @@ interface DrillCrumb {
 
 interface MapState {
   selectedNodeId: string | null
+  selectedEdgeId: string | null
   expandedNodeIds: Set<string>
   drillRootId: string | null
   drillPath: DrillCrumb[]
@@ -14,6 +15,7 @@ interface MapState {
   pendingFocusNodeId: string | null
   pendingDeleteNodeId: string | null
   setSelectedNode: (id: string | null) => void
+  setSelectedEdge: (id: string | null) => void
   toggleExpand: (id: string) => void
   expandAll: (ids: string[]) => void
   collapseAll: () => void
@@ -28,13 +30,15 @@ interface MapState {
 
 export const useMapStore = create<MapState>((set) => ({
   selectedNodeId: null,
+  selectedEdgeId: null,
   expandedNodeIds: new Set(),
   drillRootId: null,
   drillPath: [],
   pendingAutoLayout: false,
   pendingFocusNodeId: null,
   pendingDeleteNodeId: null,
-  setSelectedNode: (id) => set({ selectedNodeId: id }),
+  setSelectedNode: (id) => set({ selectedNodeId: id, selectedEdgeId: null }),
+  setSelectedEdge: (id) => set({ selectedEdgeId: id, selectedNodeId: null }),
   toggleExpand: (id) =>
     set((state) => {
       const next = new Set(state.expandedNodeIds)

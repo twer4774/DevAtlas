@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { Save, FileText, Settings2, ArrowLeft, Edit2, Search, Plus, FolderOpen, LayoutDashboard, Trash2 } from 'lucide-react'
+import { Save, FileText, Settings2, ArrowLeft, Edit2, Search, Plus, FolderOpen, LayoutDashboard, Trash2, ArrowRight, Link2Off } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { useNodes, useUpdateNode } from '@/hooks/useNodes'
-import { useEdges } from '@/hooks/useEdges'
+import { useEdges, useUpdateEdge, useDeleteEdge } from '@/hooks/useEdges'
 import { useNodeDocuments, useVersionDocuments, useDeleteDocument } from '@/hooks/useDocuments'
 import { useDocumentStore } from '@/store/documentStore'
+import { useRelationTypeStore } from '@/store/relationTypeStore'
 import { DocumentEditor } from '@/components/document/DocumentEditor'
 import { DocumentViewer } from '@/components/document/DocumentViewer'
 import { DocTypeBadge, NodeTypeBadge } from '@/components/common/Badge'
@@ -42,9 +43,9 @@ function DocList({
   onSelect,
   onNew,
 }: {
-  docs: { id: string; title: string; type: string; updated_at: string }[] | undefined
+  docs: { id: string; title: string; type: string; updated_at: string; linked_node_ids?: string[] }[] | undefined
   isLoading: boolean
-  onSelect: (id: string) => void
+  onSelect: (id: string, linkedNodeIds?: string[]) => void
   onNew: () => void
 }) {
   const deleteDocument = useDeleteDocument()
@@ -78,7 +79,7 @@ function DocList({
             <div
               key={doc.id}
               className="group px-3 py-2.5 border-b border-gray-800/50 hover:bg-gray-800/40 cursor-pointer transition-colors"
-              onClick={() => onSelect(doc.id)}
+              onClick={() => onSelect(doc.id, doc.linked_node_ids)}
             >
               <div className="flex items-center gap-2">
                 <DocTypeBadge type={doc.type} />
@@ -114,6 +115,98 @@ function DocList({
   )
 }
 
+// ── 엣지 패널 ─────────────────────────────────────────────────────────────────
+function EdgePanel({ edgeId, versionId }: { edgeId: string; versionId: string }) {
+  const { data: nodes } = useNodes(versionId)
+  const { data: edges } = useEdges(versionId)
+  const updateEdge = useUpdateEdge(versionId)
+  const deleteEdge = useDeleteEdge(versionId)
+  const { setSelectedEdge } = useMapStore()
+  const { types: relationTypes } = useRelationTypeStore()
+
+  const edge = edges?.find(e => e.id === edgeId)
+  const sourceNode = nodes?.find(n => n.id === edge?.source_id)
+  const targetNode = nodes?.find(n => n.id === edge?.target_id)
+  const currentType = relationTypes.find(rt => rt.id === edge?.relation_type)
+
+  const handleDelete = async () => {
+    if (!edge) return
+    await deleteEdge.mutateAsync({ id: edgeId })
+    setSelectedEdge(null)
+  }
+
+  if (!edge) return <Spinner className="mx-auto mt-10" />
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="border-b border-gray-800 p-3 space-y-3">
+        <div className="flex items-center gap-1.5">
+          <Link2Off size={13} className="text-gray-500 flex-shrink-0" />
+          <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">연결 엣지</span>
+        </div>
+
+        <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-2.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-400 mb-0.5">출발</p>
+            <p className="text-sm font-medium text-white truncate">{sourceNode?.title ?? '알 수 없음'}</p>
+          </div>
+          <ArrowRight size={14} className="text-gray-600 flex-shrink-0" />
+          <div className="flex-1 min-w-0 text-right">
+            <p className="text-xs text-gray-400 mb-0.5">도착</p>
+            <p className="text-sm font-medium text-white truncate">{targetNode?.title ?? '알 수 없음'}</p>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">관계 타입</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {relationTypes.map(rt => {
+              const selected = edge.relation_type === rt.id
+              return (
+                <button
+                  key={rt.id}
+                  onClick={() => updateEdge.mutate({ id: edgeId, relation_type: rt.id })}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-left transition-all text-xs"
+                  style={{
+                    borderColor: selected ? rt.color : '#374151',
+                    backgroundColor: selected ? rt.color + '18' : 'transparent',
+                    color: selected ? rt.color : '#6b7280',
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: rt.color }} />
+                  {rt.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {currentType && (
+          <div className="flex items-center gap-1.5">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: currentType.color }}
+            />
+            <span className="text-xs" style={{ color: currentType.color }}>{currentType.label}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="p-3">
+        <Button
+          variant="danger"
+          size="sm"
+          className="w-full"
+          onClick={handleDelete}
+          disabled={deleteEdge.isPending}
+        >
+          <Trash2 size={12} /> 엣지 삭제
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ── 프로젝트 문서 패널 (노드 미선택 시) ──────────────────────────────────────
 function ProjectDocsPanel({
   versionId,
@@ -125,8 +218,17 @@ function ProjectDocsPanel({
   void _projectId
   const { data: allDocs, isLoading } = useVersionDocuments(versionId)
   const { setActiveDocument, startNewDocument } = useDocumentStore()
+  const { setSelectedNode, setPendingFocusNode } = useMapStore()
 
   const docs = allDocs?.filter(d => !d.linked_node_ids?.length)
+
+  const handleSelect = (id: string, linkedNodeIds?: string[]) => {
+    setActiveDocument(id)
+    if (linkedNodeIds?.length) {
+      setSelectedNode(linkedNodeIds[0])
+      setPendingFocusNode(linkedNodeIds[0])
+    }
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -142,7 +244,7 @@ function ProjectDocsPanel({
         <DocList
           docs={docs}
           isLoading={isLoading}
-          onSelect={(id) => setActiveDocument(id)}
+          onSelect={handleSelect}
           onNew={startNewDocument}
         />
       </div>
@@ -156,6 +258,15 @@ function AreaPanel({ node }: { node: ArchitectureNode }) {
   const color = AREA_COLORS[colorIdx % AREA_COLORS.length]
   const { data: docs, isLoading } = useNodeDocuments(node.id)
   const { setActiveDocument, startNewDocument } = useDocumentStore()
+  const { setSelectedNode, setPendingFocusNode } = useMapStore()
+
+  const handleSelect = (id: string, linkedNodeIds?: string[]) => {
+    setActiveDocument(id)
+    if (linkedNodeIds?.length) {
+      setSelectedNode(linkedNodeIds[0])
+      setPendingFocusNode(linkedNodeIds[0])
+    }
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -178,7 +289,7 @@ function AreaPanel({ node }: { node: ArchitectureNode }) {
         <DocList
           docs={docs}
           isLoading={isLoading}
-          onSelect={(id) => setActiveDocument(id)}
+          onSelect={handleSelect}
           onNew={startNewDocument}
         />
       </div>
@@ -188,7 +299,7 @@ function AreaPanel({ node }: { node: ArchitectureNode }) {
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 export function NodePropertiesPanel({ projectId, versionId }: Props) {
-  const { selectedNodeId, enterDrillDown } = useMapStore()
+  const { selectedNodeId, selectedEdgeId, enterDrillDown, setSelectedNode, setPendingFocusNode } = useMapStore()
   const { activePanelView, activeDocumentId, setActiveDocument, setView, startNewDocument } = useDocumentStore()
   const { data: nodes } = useNodes(versionId)
   const { data: edges } = useEdges(versionId)
@@ -271,6 +382,11 @@ export function NodePropertiesPanel({ projectId, versionId }: Props) {
         />
       </div>
     )
+  }
+
+  // ── 엣지 선택 → 엣지 패널 ────────────────────────────────────────────────────
+  if (selectedEdgeId && !selectedNodeId) {
+    return <EdgePanel edgeId={selectedEdgeId} versionId={versionId} />
   }
 
   // ── 노드 미선택 → 프로젝트 문서 ────────────────────────────────────────────
@@ -453,7 +569,13 @@ export function NodePropertiesPanel({ projectId, versionId }: Props) {
           <DocList
             docs={nodeDocs}
             isLoading={docsLoading}
-            onSelect={(id) => setActiveDocument(id)}
+            onSelect={(id, linkedNodeIds) => {
+              setActiveDocument(id)
+              if (linkedNodeIds?.length) {
+                setSelectedNode(linkedNodeIds[0])
+                setPendingFocusNode(linkedNodeIds[0])
+              }
+            }}
             onNew={startNewDocument}
           />
         )}
