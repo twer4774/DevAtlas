@@ -20,7 +20,7 @@ export function RelationEdge({
   const [hovered, setHovered] = useState(false)
   const [mouseFlowPos, setMouseFlowPos] = useState<{ x: number; y: number } | null>(null)
 
-  const [edgePath] = getBezierPath({
+  const [edgePath, midX, midY] = getBezierPath({
     sourceX, sourceY, sourcePosition,
     targetX, targetY, targetPosition,
   })
@@ -70,13 +70,13 @@ export function RelationEdge({
         onMouseLeave={handleMouseLeave}
         style={{ cursor: 'pointer' }}
       />
-      {active && label && mouseFlowPos && (
+      {active && label && (mouseFlowPos || selected) && (
         <EdgeLabelRenderer>
           <div
             className="nodrag nopan"
             style={{
               position: 'absolute',
-              transform: `translate(-50%, calc(-100% - 10px)) translate(${mouseFlowPos.x}px, ${mouseFlowPos.y}px)`,
+              transform: `translate(-50%, calc(-100% - 10px)) translate(${mouseFlowPos?.x ?? midX}px, ${mouseFlowPos?.y ?? midY}px)`,
               pointerEvents: 'none',
               zIndex: 10,
               fontSize: 10,
