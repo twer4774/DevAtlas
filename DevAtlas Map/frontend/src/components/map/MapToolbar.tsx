@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react'
 import {
   ZoomIn, ZoomOut, Maximize2, ChevronsDown, ChevronsUp,
   Plus, Undo2, Redo2, Wand2, Keyboard, Filter, Spline, RectangleHorizontal, FileText,
-  FolderOpen, Network,
+  FolderOpen, Network, Download,
 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { useEdgeFilterStore } from '@/store/edgeFilterStore'
@@ -28,6 +28,7 @@ import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
 import { RelationTypeManager } from './RelationTypeManager'
 import { NODE_TYPES, INFRA_TYPES, getNodeTypeLabel, NODE_TYPE_COLORS, type NodeType } from '@/lib/constants'
+import { generateExportHtml } from '@/lib/exportHtml'
 import { cn } from '@/lib/cn'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -50,7 +51,7 @@ interface Props {
 }
 
 export function MapToolbar({ versionId }: Props) {
-  const { zoomIn, zoomOut, fitView, getNodes, getViewport } = useReactFlow()
+  const { zoomIn, zoomOut, fitView, getNodes, getEdges, getViewport } = useReactFlow()
   const { expandAll, collapseAll, triggerAutoLayout } = useMapStore()
   const { hiddenTypes, toggleType, showAll } = useEdgeFilterStore()
   const { types: relationTypes } = useRelationTypeStore()
@@ -147,6 +148,19 @@ export function MapToolbar({ versionId }: Props) {
     setTitle('')
     setType('Program')
     setAddOpen(false)
+  }
+
+  const handleExportHtml = () => {
+    const rfNodes = getNodes()
+    const rfEdges = getEdges()
+    const html = generateExportHtml(rfNodes, rfEdges, 'Architecture Map')
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `architecture-map-${new Date().toISOString().slice(0, 10)}.html`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const handleAddArea = async () => {
@@ -260,6 +274,14 @@ export function MapToolbar({ versionId }: Props) {
               {docs.length > 9 ? '9+' : docs.length}
             </span>
           )}
+        </button>
+        <div className="w-px h-4 bg-gray-700 mx-1" />
+        <button
+          onClick={handleExportHtml}
+          className="p-1.5 text-gray-400 hover:text-emerald-400 rounded transition-colors"
+          title="HTML로 내보내기"
+        >
+          <Download size={15} />
         </button>
         <div className="w-px h-4 bg-gray-700 mx-1" />
         <button onClick={() => setShortcutOpen(true)} className="p-1.5 text-gray-400 hover:text-white rounded transition-colors" title="단축키 목록">
