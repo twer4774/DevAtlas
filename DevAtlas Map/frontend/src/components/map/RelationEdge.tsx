@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import {
   BaseEdge,
   EdgeLabelRenderer,
   getBezierPath,
+  useReactFlow,
   type EdgeProps,
 } from '@xyflow/react'
 
@@ -15,9 +16,11 @@ export function RelationEdge({
   selected,
   markerEnd,
 }: EdgeProps) {
+  const { screenToFlowPosition } = useReactFlow()
   const [hovered, setHovered] = useState(false)
+  const [mouseFlowPos, setMouseFlowPos] = useState<{ x: number; y: number } | null>(null)
 
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath] = getBezierPath({
     sourceX, sourceY, sourcePosition,
     targetX, targetY, targetPosition,
   })
@@ -26,6 +29,20 @@ export function RelationEdge({
   const s = (style ?? {}) as React.CSSProperties
   const stroke = s.stroke as string | undefined
   const strokeDasharray = s.strokeDasharray as string | undefined
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent) => {
+    setHovered(true)
+    setMouseFlowPos(screenToFlowPosition({ x: e.clientX, y: e.clientY }))
+  }, [screenToFlowPosition])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    setMouseFlowPos(screenToFlowPosition({ x: e.clientX, y: e.clientY }))
+  }, [screenToFlowPosition])
+
+  const handleMouseLeave = useCallback(() => {
+    setHovered(false)
+    setMouseFlowPos(null)
+  }, [])
 
   return (
     <>
@@ -42,23 +59,24 @@ export function RelationEdge({
           pointerEvents: 'none',
         }}
       />
-      {/* Wider transparent hit area for hover detection — rendered on top */}
+      {/* Wider transparent hit area — on top so it receives mouse events */}
       <path
         d={edgePath}
         fill="none"
         stroke="transparent"
         strokeWidth={14}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
         style={{ cursor: 'pointer' }}
       />
-      {active && label && (
+      {active && label && mouseFlowPos && (
         <EdgeLabelRenderer>
           <div
             className="nodrag nopan"
             style={{
               position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              transform: `translate(-50%, calc(-100% - 10px)) translate(${mouseFlowPos.x}px, ${mouseFlowPos.y}px)`,
               pointerEvents: 'none',
               zIndex: 10,
               fontSize: 10,
