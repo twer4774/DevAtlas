@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useHistoryStore } from '@/store/historyStore'
 import { useToastStore } from '@/store/toastStore'
 import { nodesApi } from '@/api/nodes'
+import { edgesApi } from '@/api/edges'
 
 export function useHistory() {
   const { undo: popUndo, redo: popRedo, canUndo, canRedo, replaceTopFuture } = useHistoryStore()
@@ -41,6 +42,31 @@ export function useHistory() {
         addToast('실행 취소 실패', 'error')
       }
     }
+
+    if (entry.kind === 'edge_created') {
+      try {
+        await edgesApi.delete(entry.edgeId)
+        qc.invalidateQueries({ queryKey: ['edges', entry.versionId] })
+        addToast('엣지 생성이 취소되었습니다', 'info')
+      } catch {
+        addToast('실행 취소 실패', 'error')
+      }
+    }
+
+    if (entry.kind === 'edge_deleted') {
+      try {
+        const newEdge = await edgesApi.create(entry.versionId, {
+          source_id: entry.snapshot.source_id,
+          target_id: entry.snapshot.target_id,
+          relation_type: entry.snapshot.relation_type,
+        })
+        replaceTopFuture({ kind: 'edge_created', versionId: entry.versionId, edgeId: newEdge.id })
+        qc.invalidateQueries({ queryKey: ['edges', entry.versionId] })
+        addToast('엣지 삭제가 취소되었습니다', 'info')
+      } catch {
+        addToast('실행 취소 실패', 'error')
+      }
+    }
   }, [popUndo, replaceTopFuture, qc, addToast])
 
   const redo = useCallback(async () => {
@@ -61,6 +87,16 @@ export function useHistory() {
       try {
         await nodesApi.delete(entry.nodeId, 'redo delete', 'user')
         qc.invalidateQueries({ queryKey: ['nodes', entry.versionId] })
+        addToast('다시 실행됨', 'info')
+      } catch {
+        addToast('다시 실행 실패', 'error')
+      }
+    }
+
+    if (entry.kind === 'edge_created') {
+      try {
+        await edgesApi.delete(entry.edgeId)
+        qc.invalidateQueries({ queryKey: ['edges', entry.versionId] })
         addToast('다시 실행됨', 'info')
       } catch {
         addToast('다시 실행 실패', 'error')

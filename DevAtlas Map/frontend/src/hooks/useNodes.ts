@@ -15,10 +15,12 @@ export const useNodes = (versionId: string | null, paused = false) =>
 
 export const useCreateNode = (versionId: string) => {
   const qc = useQueryClient()
+  const { push } = useHistoryStore()
   const { add: addToast } = useToastStore()
   return useMutation({
     mutationFn: (data: Parameters<typeof nodesApi.create>[1]) => nodesApi.create(versionId, data),
-    onSuccess: () => {
+    onSuccess: (newNode) => {
+      push({ kind: 'node_created', versionId, nodeId: newNode.id })
       qc.invalidateQueries({ queryKey: ['nodes', versionId] })
       addToast('노드가 추가되었습니다', 'success')
     },

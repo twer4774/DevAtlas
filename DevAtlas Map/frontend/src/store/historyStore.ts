@@ -25,6 +25,17 @@ export type HistoryEntry =
       versionId: string
       nodeId: string
     }
+  | {
+      kind: 'edge_created'
+      versionId: string
+      edgeId: string
+    }
+  | {
+      kind: 'edge_deleted'
+      versionId: string
+      edgeId: string
+      snapshot: { source_id: string; target_id: string; relation_type: string }
+    }
 
 const MAX_HISTORY = 50
 
