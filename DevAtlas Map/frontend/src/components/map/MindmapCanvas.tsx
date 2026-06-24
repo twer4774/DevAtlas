@@ -36,6 +36,7 @@ import { GroupAreaNode } from './GroupAreaNode'
 import { RelationEdge } from './RelationEdge'
 import { MapToolbar } from './MapToolbar'
 import { DrillBreadcrumb } from './DrillBreadcrumb'
+import { NodeSearchBar } from './NodeSearchBar'
 import { Spinner } from '@/components/common/Spinner'
 import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
@@ -196,6 +197,7 @@ function FlowInner({ versionId }: { versionId: string }) {
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
   const [selectedRelationType, setSelectedRelationType] = useState<string>('depends_on')
   const [isDragging, setIsDragging] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const { data: rawNodes, isLoading: nodesLoading } = useNodes(versionId, isDragging)
   const { data: rawEdges, isLoading: edgesLoading } = useEdges(versionId)
@@ -683,6 +685,17 @@ function FlowInner({ versionId }: { versionId: string }) {
     )
   }
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   const showEmptyHint = !!rawNodes && rawNodes.length === 0
 
   return (
@@ -746,7 +759,12 @@ function FlowInner({ versionId }: { versionId: string }) {
         </div>
       )}
       <DrillBreadcrumb />
-      <MapToolbar versionId={versionId} />
+      <MapToolbar versionId={versionId} onSearchOpen={() => setSearchOpen(true)} />
+      <NodeSearchBar
+        nodes={rawNodes ?? []}
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+      />
 
       {/* 엣지 타입 선택 모달 */}
       <Modal

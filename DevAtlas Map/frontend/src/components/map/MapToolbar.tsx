@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react'
 import {
   ZoomIn, ZoomOut, Maximize2, ChevronsDown, ChevronsUp,
   Plus, Undo2, Redo2, Wand2, Keyboard, Filter, Spline, RectangleHorizontal, FileText,
-  FolderOpen, Network, Download,
+  FolderOpen, Network, Download, Search,
 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { useEdgeFilterStore } from '@/store/edgeFilterStore'
@@ -49,9 +49,10 @@ const SHORTCUTS = [
 
 interface Props {
   versionId: string
+  onSearchOpen?: () => void
 }
 
-export function MapToolbar({ versionId }: Props) {
+export function MapToolbar({ versionId, onSearchOpen }: Props) {
   const { zoomIn, zoomOut, fitView, getNodes, getEdges, getViewport } = useReactFlow()
   const { expandAll, collapseAll, triggerAutoLayout } = useMapStore()
   const { hiddenTypes, toggleType, showAll } = useEdgeFilterStore()
@@ -234,6 +235,20 @@ export function MapToolbar({ versionId }: Props) {
         <button onClick={() => setAddAreaOpen(true)} className="p-1.5 text-blue-400 hover:text-blue-300 rounded transition-colors" title="영역 추가">
           <RectangleHorizontal size={15} />
         </button>
+        <div className="w-px h-4 bg-gray-700 mx-1" />
+
+        {/* Search */}
+        {onSearchOpen && (
+          <button
+            onClick={onSearchOpen}
+            title="노드 검색 (⌘K)"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors border border-white/8"
+          >
+            <Search size={13} />
+            <span className="text-[11px]">검색</span>
+            <span className="text-[9px] text-gray-600 border border-white/10 rounded px-1 py-0.5 leading-none">⌘K</span>
+          </button>
+        )}
         <div className="w-px h-4 bg-gray-700 mx-1" />
 
         {/* View / Zoom */}
