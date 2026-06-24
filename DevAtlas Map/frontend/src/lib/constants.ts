@@ -2,6 +2,14 @@
 export const NODE_TYPES = ['Program', 'Capability', 'Feature', 'Policy', 'External'] as const
 export type NodeType = typeof NODE_TYPES[number]
 
+export const INFRA_TYPES = [
+  'backend', 'frontend', 'database', 'storage',
+  'cache', 'api', 'service', 'gateway',
+  'broker', 'queue', 'function', 'worker',
+  'cloud-service', 'auth-service', 'network',
+  'device',
+] as const
+
 export const DOC_TYPES = ['planning', 'policy', 'technical', 'api', 'adr'] as const
 export type DocType = typeof DOC_TYPES[number]
 

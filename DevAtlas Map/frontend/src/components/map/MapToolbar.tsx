@@ -23,7 +23,7 @@ import { useHistory } from '@/hooks/useHistory'
 import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
 import { RelationTypeManager } from './RelationTypeManager'
-import { NODE_TYPES } from '@/lib/constants'
+import { NODE_TYPES, INFRA_TYPES, getNodeTypeLabel } from '@/lib/constants'
 import { cn } from '@/lib/cn'
 
 /** 패딩: 영역 헤더 아래 첫 줄에 노드 두기 */
@@ -371,7 +371,16 @@ export function MapToolbar({ versionId }: Props) {
               value={type}
               onChange={(e) => setType(e.target.value)}
             >
-              {NODE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              <optgroup label="개념 타입">
+                {NODE_TYPES.map((t) => (
+                  <option key={t} value={t}>{getNodeTypeLabel(t)}</option>
+                ))}
+              </optgroup>
+              <optgroup label="인프라 타입">
+                {INFRA_TYPES.map((t) => (
+                  <option key={t} value={t}>{getNodeTypeLabel(t)}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
           <div className="flex justify-end gap-2">
