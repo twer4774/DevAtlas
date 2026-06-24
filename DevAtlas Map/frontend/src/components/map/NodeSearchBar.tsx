@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Search, CornerDownLeft } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { getNodeTypeColor, getNodeTypeLabel } from '@/lib/constants'
@@ -97,9 +98,9 @@ export function NodeSearchBar({ nodes, open, onClose }: Props) {
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div
-      className="absolute inset-0 z-50 flex items-start justify-center pt-[10vh]"
+      className="fixed inset-0 z-[9999] flex items-start justify-center pt-[10vh]"
       style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)' }}
       onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
     >
@@ -116,7 +117,7 @@ export function NodeSearchBar({ nodes, open, onClose }: Props) {
             onChange={e => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="노드 이름, 타입, 설명으로 검색..."
-            className="flex-1 bg-transparent text-sm text-gray-100 placeholder:text-gray-600 outline-none"
+            className="flex-1 min-w-0 w-full bg-transparent text-sm text-gray-100 placeholder:text-gray-600 outline-none"
           />
           <span className="text-[10px] text-gray-600 border border-white/10 rounded px-1.5 py-0.5">Esc</span>
         </div>
@@ -181,6 +182,7 @@ export function NodeSearchBar({ nodes, open, onClose }: Props) {
           <span className="ml-auto">{filtered.length}개 노드</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

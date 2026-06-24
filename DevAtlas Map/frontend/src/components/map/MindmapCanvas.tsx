@@ -675,16 +675,6 @@ function FlowInner({ versionId }: { versionId: string }) {
     [deleteEdge],
   )
 
-  const isLoading = nodesLoading || edgesLoading
-
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Spinner />
-      </div>
-    )
-  }
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -695,6 +685,16 @@ function FlowInner({ versionId }: { versionId: string }) {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  const isLoading = nodesLoading || edgesLoading
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Spinner />
+      </div>
+    )
+  }
 
   const showEmptyHint = !!rawNodes && rawNodes.length === 0
 
