@@ -11,6 +11,7 @@ import {
   useEdgesState,
   applyNodeChanges,
   type NodeTypes,
+  type EdgeTypes,
   type Connection,
   type Node,
   type Edge as RFEdge,
@@ -31,6 +32,7 @@ import { applyGroupFitOptimistic, fitAllGroups } from '@/lib/groupFit'
 import { nodesApi } from '@/api/nodes'
 import { ArchNodeComponent } from './ArchNode'
 import { GroupAreaNode } from './GroupAreaNode'
+import { RelationEdge } from './RelationEdge'
 import { MapToolbar } from './MapToolbar'
 import { DrillBreadcrumb } from './DrillBreadcrumb'
 import { Spinner } from '@/components/common/Spinner'
@@ -40,6 +42,7 @@ import { getNodeTypeColor } from '@/lib/constants'
 import type { ArchitectureNode, NodeEdge } from '@/types'
 
 const nodeTypes: NodeTypes = { archNode: ArchNodeComponent, groupArea: GroupAreaNode }
+const edgeTypes: EdgeTypes = { relation: RelationEdge }
 const NODE_W = 210
 function MiniMapNodeWithLabel(props: {
   id: string
@@ -685,6 +688,7 @@ function FlowInner({ versionId }: { versionId: string }) {
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
@@ -703,7 +707,7 @@ function FlowInner({ versionId }: { versionId: string }) {
         zoomOnPinch
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
-          type: 'smoothstep',
+          type: 'relation',
           style: { stroke: '#374151', strokeWidth: 1.5 },
           deletable: true,
         }}
