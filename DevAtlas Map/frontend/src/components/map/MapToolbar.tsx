@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import {
   ZoomIn, ZoomOut, Maximize2, ChevronsDown, ChevronsRight,
-  Plus, Undo2, Redo2, LayoutGrid, Keyboard, Filter, Settings2, LayoutDashboard, FileText,
+  Plus, Undo2, Redo2, Wand2, Keyboard, Filter, Settings2, RectangleHorizontal, FileText,
   FolderOpen, Network,
 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
@@ -210,7 +210,7 @@ export function MapToolbar({ versionId }: Props) {
           className="p-1.5 text-gray-400 hover:text-white rounded transition-colors"
           title="자동 정렬 (⌘⇧L)"
         >
-          <LayoutGrid size={15} />
+          <Wand2 size={15} />
         </button>
         <div className="w-px h-4 bg-gray-700 mx-1" />
 
@@ -240,7 +240,7 @@ export function MapToolbar({ versionId }: Props) {
         <div className="w-px h-4 bg-gray-700 mx-1" />
 
         <button onClick={() => setAddAreaOpen(true)} className="p-1.5 text-blue-400 hover:text-blue-300 rounded transition-colors" title="영역 추가">
-          <LayoutDashboard size={15} />
+          <RectangleHorizontal size={15} />
         </button>
         <button onClick={() => setAddOpen(true)} className="p-1.5 text-blue-400 hover:text-blue-300 rounded transition-colors" title="노드 추가">
           <Plus size={15} />
