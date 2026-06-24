@@ -3,6 +3,7 @@ import { useReactFlow } from '@xyflow/react'
 import {
   ZoomIn, ZoomOut, Maximize2, ChevronsDown, ChevronsRight,
   Plus, Undo2, Redo2, LayoutGrid, Keyboard, Filter, Settings2, LayoutDashboard, FileText,
+  FolderOpen, Network,
 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { useEdgeFilterStore } from '@/store/edgeFilterStore'
@@ -26,7 +27,7 @@ import { useHistory } from '@/hooks/useHistory'
 import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
 import { RelationTypeManager } from './RelationTypeManager'
-import { NODE_TYPES, INFRA_TYPES, getNodeTypeLabel } from '@/lib/constants'
+import { NODE_TYPES, INFRA_TYPES, getNodeTypeLabel, NODE_TYPE_COLORS, type NodeType } from '@/lib/constants'
 import { cn } from '@/lib/cn'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -304,36 +305,91 @@ export function MapToolbar({ versionId }: Props) {
               </div>
             )}
 
-            {docs?.map(doc => (
-              <button
-                key={doc.id}
-                className="w-full flex items-start gap-3 px-4 py-3 text-left transition-all border-b"
-                style={{ borderColor: '#161b22', background: 'transparent' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#161b22')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                onClick={() => {
-                  setActiveDocument(doc.id)
-                  if (doc.linked_node_ids?.length) {
-                    setSelectedNode(doc.linked_node_ids[0])
-                    setPendingFocusNode(doc.linked_node_ids[0])
-                  }
-                  setDocsOpen(false)
-                }}
-              >
-                <DocTypeBadge type={doc.type} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: '#c9d1d9' }}>{doc.title}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#484f58' }}>
-                    {formatDistanceToNow(new Date(doc.updated_at), { addSuffix: true, locale: ko })}
-                    {doc.linked_node_ids?.length > 0 && (
-                      <span className="ml-1.5" style={{ color: '#3d6b9c' }}>
-                        노드 {doc.linked_node_ids.length}개 연결
-                      </span>
-                    )}
-                  </p>
+            {(() => {
+              if (!docs || docs.length === 0) return null
+              const projectDocs = docs.filter(d => !d.linked_node_ids?.length)
+              const linkedDocs = docs.filter(d => d.linked_node_ids && d.linked_node_ids.length > 0)
+
+              const nodeGroupOrder: string[] = []
+              const nodeGroupMap = new Map<string, typeof docs>()
+              linkedDocs.forEach(doc => {
+                const nodeId = doc.linked_node_ids![0]
+                if (!nodeGroupMap.has(nodeId)) {
+                  nodeGroupMap.set(nodeId, [])
+                  nodeGroupOrder.push(nodeId)
+                }
+                nodeGroupMap.get(nodeId)!.push(doc)
+              })
+
+              const DocBtn = ({ doc }: { doc: typeof docs[0] }) => (
+                <button
+                  key={doc.id}
+                  className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-all"
+                  style={{ background: 'transparent' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#161b22')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  onClick={() => {
+                    setActiveDocument(doc.id)
+                    if (doc.linked_node_ids?.length) {
+                      setSelectedNode(doc.linked_node_ids[0])
+                      setPendingFocusNode(doc.linked_node_ids[0])
+                    }
+                    setDocsOpen(false)
+                  }}
+                >
+                  <DocTypeBadge type={doc.type} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: '#c9d1d9' }}>{doc.title}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: '#484f58' }}>
+                      {formatDistanceToNow(new Date(doc.updated_at), { addSuffix: true, locale: ko })}
+                    </p>
+                  </div>
+                </button>
+              )
+
+              const SectionHeader = ({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) => (
+                <div className="flex items-center gap-2 px-4 py-2 mt-1" style={{ borderTop: '1px solid #21262d' }}>
+                  <span style={{ color: '#484f58' }}>{icon}</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#6e7681' }}>{label}</span>
+                  <span className="text-[10px] px-1.5 rounded-full ml-auto" style={{ background: '#21262d', color: '#6e7681' }}>{count}</span>
                 </div>
-              </button>
-            ))}
+              )
+
+              return (
+                <>
+                  {projectDocs.length > 0 && (
+                    <>
+                      <SectionHeader icon={<FolderOpen size={11} />} label="프로젝트 문서" count={projectDocs.length} />
+                      {projectDocs.map(doc => <DocBtn key={doc.id} doc={doc} />)}
+                    </>
+                  )}
+                  {nodeGroupOrder.length > 0 && (
+                    <>
+                      <SectionHeader icon={<Network size={11} />} label="노드별 문서" count={linkedDocs.length} />
+                      {nodeGroupOrder.map(nodeId => {
+                        const node = nodes?.find(n => n.id === nodeId)
+                        const groupDocs = nodeGroupMap.get(nodeId)!
+                        const typeColor = NODE_TYPE_COLORS[node?.type as NodeType] ?? '#6b7280'
+                        return (
+                          <div key={nodeId}>
+                            <div className="flex items-center gap-2 px-4 py-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: typeColor }} />
+                              <span className="text-xs font-semibold truncate flex-1" style={{ color: '#8b949e' }}>
+                                {node?.title ?? '알 수 없음'}
+                              </span>
+                              <span className="text-[10px]" style={{ color: '#484f58' }}>{groupDocs.length}</span>
+                            </div>
+                            <div className="pl-2">
+                              {groupDocs.map(doc => <DocBtn key={doc.id} doc={doc} />)}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </>
+                  )}
+                </>
+              )
+            })()}
           </div>
         </div>
       )}
