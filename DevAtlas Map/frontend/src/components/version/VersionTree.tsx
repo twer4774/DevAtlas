@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GitBranch, Plus, CheckCircle2 } from 'lucide-react'
 import { useVersions, useCreateVersion, useForkVersion } from '@/hooks/useVersions'
 import { useProjectStore } from '@/store/projectStore'
@@ -20,6 +20,13 @@ export function VersionTree({ projectId }: Props) {
   const [createOpen, setCreateOpen] = useState(false)
   const [forkOpen, setForkOpen] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
+
+  // 버전 목록 로드 후 activeVersion이 없으면 첫 번째 버전 자동 선택
+  useEffect(() => {
+    if (!activeVersionId && versions && versions.length > 0) {
+      setActiveVersion(versions[0].id)
+    }
+  }, [versions, activeVersionId, setActiveVersion])
 
   const handleCreate = async () => {
     if (!newName.trim()) return
