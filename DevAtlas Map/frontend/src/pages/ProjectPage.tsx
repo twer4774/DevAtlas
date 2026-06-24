@@ -8,6 +8,7 @@ import {
 } from 'react-resizable-panels'
 import { useProjectStore } from '@/store/projectStore'
 import { useProject } from '@/hooks/useProjects'
+import { useVersion } from '@/hooks/useVersions'
 import { useUIStore } from '@/store/uiStore'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { LeftPanel } from '@/components/layout/LeftPanel'
@@ -19,6 +20,7 @@ export function ProjectPage() {
   const navigate = useNavigate()
   const { setActiveProject, activeVersionId } = useProjectStore()
   const { data: project } = useProject(projectId ?? null)
+  const { data: activeVersion } = useVersion(activeVersionId)
   const { openSearch } = useUIStore()
 
   useEffect(() => {
@@ -36,9 +38,9 @@ export function ProjectPage() {
           <ArrowLeft size={16} />
         </button>
         <span className="text-sm font-medium text-white">{project?.name ?? '...'}</span>
-        {activeVersionId && (
+        {activeVersionId && activeVersion && (
           <span className="text-xs text-gray-500 ml-1">
-            — {activeVersionId.slice(0, 8)}
+            — {activeVersion.name}
           </span>
         )}
         <div className="ml-auto">

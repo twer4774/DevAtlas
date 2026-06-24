@@ -8,6 +8,13 @@ export const useVersions = (projectId: string | null) =>
     enabled: !!projectId,
   })
 
+export const useVersion = (id: string | null) =>
+  useQuery({
+    queryKey: ['version', id],
+    queryFn: () => versionsApi.get(id!),
+    enabled: !!id,
+  })
+
 export const useCreateVersion = (projectId: string) => {
   const qc = useQueryClient()
   return useMutation({
