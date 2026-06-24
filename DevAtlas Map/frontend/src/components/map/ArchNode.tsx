@@ -52,7 +52,7 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as ArchNodeData
   const { node, hasChildren, childCount, isAncestorHighlighted } = nodeData
-  const { expandedNodeIds, toggleExpand, selectedNode } = useMapStore()
+  const { expandedNodeIds, toggleExpand, selectedNodeId } = useMapStore()
   const { isDiffMode, diffResult } = useDiffStore()
   const [nodeHovered, setNodeHovered] = useState(false)
 
@@ -98,7 +98,7 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
       ? '0 0 16px rgba(251,146,60,0.2), 0 4px 16px rgba(0,0,0,0.4)'
       : '0 4px 20px rgba(0,0,0,0.4)'
 
-  const isDimmedBySelection = selectedNode !== null && selectedNode.id !== node.id
+  const isDimmedBySelection = selectedNodeId != null && selectedNodeId !== node.id
   const nodeOpacity = (isDimmedBySelection && !nodeHovered) ? 0.5 : 1
 
   return (

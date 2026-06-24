@@ -59,7 +59,7 @@ export function RelationEdge({
   data,
 }: EdgeProps) {
   const { screenToFlowPosition } = useReactFlow()
-  const { selectedNode } = useMapStore()
+  const { selectedNodeId } = useMapStore()
   const [hovered, setHovered] = useState(false)
   const [mouseFlowPos, setMouseFlowPos] = useState<{ x: number; y: number } | null>(null)
 
@@ -74,8 +74,8 @@ export function RelationEdge({
   const stroke = s.stroke as string | undefined
   const strokeDasharray = s.strokeDasharray as string | undefined
 
-  const isNodeSelected = selectedNode !== null
-  const isConnected = !isNodeSelected || source === selectedNode?.id || target === selectedNode?.id
+  const isNodeSelected = selectedNodeId != null
+  const isConnected = !isNodeSelected || source === selectedNodeId || target === selectedNodeId
   const opacity = active ? 1 : (isNodeSelected ? (isConnected ? 0.9 : 0.06) : 0.4)
   const strokeWidth = active ? 2.5 : (isNodeSelected && isConnected ? 2 : 1.5)
   const edgeFilter = isNodeSelected && isConnected && !active

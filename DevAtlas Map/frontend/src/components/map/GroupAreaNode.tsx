@@ -27,7 +27,7 @@ export const GroupAreaNode = memo(({ data, selected }: NodeProps) => {
   const [draftTitle, setDraftTitle] = useState(node.title)
   const updateNode = useUpdateNode(node.version_id)
   const deleteNode = useDeleteNode(node.version_id)
-  const { setSelectedNode, enterDrillDown, drillRootId, selectedNode } = useMapStore()
+  const { setSelectedNode, enterDrillDown, drillRootId, selectedNodeId } = useMapStore()
   const [areaHovered, setAreaHovered] = useState(false)
 
   const saveTitle = () => {
@@ -64,7 +64,7 @@ export const GroupAreaNode = memo(({ data, selected }: NodeProps) => {
           background: `linear-gradient(160deg, ${color.text}0e 0%, ${color.bg} 40%)`,
           border: `1px solid ${borderColor}`,
           boxShadow,
-          opacity: (selectedNode !== null && selectedNode.id !== node.id && !areaHovered) ? 0.5 : 1,
+          opacity: (selectedNodeId != null && selectedNodeId !== node.id && !areaHovered) ? 0.5 : 1,
           transition: 'opacity 0.2s',
         }}
         onMouseEnter={() => setAreaHovered(true)}
