@@ -25,13 +25,11 @@ interface ArchNodeData {
 }
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
-  // PRD taxonomy
   Program: Layers,
   Capability: Target,
   Feature: Zap,
   Policy: Shield,
   External: ExternalLink,
-  // Infrastructure / cloud
   service: Server,
   backend: Server,
   api: Code,
@@ -67,49 +65,72 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
   const statusColor = status ? NODE_STATUS_COLORS[status] : undefined
   const statusLabel = status ? NODE_STATUS_LABELS[status] : undefined
 
-  let ringStyle = ''
-  let bgStyle = ''
+  // Diff mode overrides
+  let diffBorder = ''
+  let diffBg = ''
   if (isDiffMode && diffResult) {
     if (diffResult.added.includes(node.id)) {
-      ringStyle = 'ring-2 ring-green-500'
-      bgStyle = 'bg-green-500/5'
+      diffBorder = '2px solid #22c55e'
+      diffBg = 'rgba(34,197,94,0.05)'
     } else if (diffResult.deleted.includes(node.id)) {
-      ringStyle = 'ring-2 ring-red-500 ring-dashed'
-      bgStyle = 'bg-red-500/5'
+      diffBorder = '2px dashed #ef4444'
+      diffBg = 'rgba(239,68,68,0.05)'
     } else if (diffResult.changed.includes(node.id)) {
-      ringStyle = 'ring-2 ring-yellow-400'
-      bgStyle = 'bg-yellow-400/5'
+      diffBorder = '2px solid #facc15'
+      diffBg = 'rgba(250,204,21,0.05)'
     }
   }
+
+  const isHighlighted = isAncestorHighlighted && !selected
+
+  const border = diffBorder || (
+    selected
+      ? `1.5px solid ${typeColor}99`
+      : isHighlighted
+        ? '1.5px solid rgba(251,146,60,0.5)'
+        : `1px solid ${typeColor}22`
+  )
+
+  const boxShadow = selected
+    ? `0 0 0 1px ${typeColor}44, 0 0 24px ${typeColor}44, 0 8px 32px rgba(0,0,0,0.5)`
+    : isHighlighted
+      ? '0 0 16px rgba(251,146,60,0.2), 0 4px 16px rgba(0,0,0,0.4)'
+      : '0 4px 20px rgba(0,0,0,0.4)'
 
   return (
     <div
       className={cn(
-        // 드래그 중 위치(transform) 업데이트에 transition이 걸리면 깜빡/지연처럼 느껴질 수 있어,
-        // 색/그림자 등 시각적 상태 변화에만 transition을 제한한다.
-        'relative flex flex-col w-[210px] rounded-xl border bg-gray-900 shadow-xl transition-colors duration-150 group',
-        'will-change-transform',
-        'overflow-hidden',
-        selected
-          ? 'border-blue-500 shadow-blue-500/30 shadow-lg'
-          : isAncestorHighlighted
-            ? 'border-orange-400/60 shadow-orange-400/20 shadow-lg'
-            : ringStyle || 'border-gray-700/80 hover:border-gray-500',
-        bgStyle,
+        'relative flex flex-col w-[210px] rounded-xl overflow-hidden',
+        'will-change-transform transition-shadow duration-150 group',
       )}
+      style={{
+        background: diffBg || `linear-gradient(145deg, ${typeColor}12 0%, #0d1117 55%)`,
+        border,
+        boxShadow,
+      }}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
+      {/* Top accent bar */}
+      <div
+        className="h-[2px] w-full flex-shrink-0"
+        style={{ background: `linear-gradient(90deg, ${typeColor}cc 0%, ${typeColor}00 100%)` }}
+      />
+
+      {/* Header: icon + type label + status */}
+      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
         <div
-          className="flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0"
-          style={{ backgroundColor: typeColor + '22', color: typeColor }}
+          className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
+          style={{
+            backgroundColor: typeColor + '20',
+            border: `1px solid ${typeColor}40`,
+            color: typeColor,
+          }}
         >
-          <Icon size={13} strokeWidth={2} />
+          <Icon size={14} strokeWidth={1.8} />
         </div>
 
         <span
-          className="text-[10px] font-medium uppercase tracking-wider flex-1 truncate"
-          style={{ color: typeColor }}
+          className="text-[9px] font-bold uppercase tracking-widest flex-1 truncate"
+          style={{ color: typeColor + 'bb' }}
         >
           {typeLabel}
         </span>
@@ -117,44 +138,61 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
         {statusLabel && statusColor && (
           <span
             className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-none flex-shrink-0"
-            style={{ backgroundColor: statusColor + '22', color: statusColor }}
+            style={{
+              backgroundColor: statusColor + '20',
+              border: `1px solid ${statusColor}40`,
+              color: statusColor,
+            }}
           >
             {statusLabel}
           </span>
         )}
       </div>
 
-      {/* Title */}
-      <div className="px-3 pb-1.5">
-        <span className="text-sm font-semibold text-gray-100 leading-snug line-clamp-2 block">
+      {/* Title + description */}
+      <div className="px-3 pb-2">
+        <span className="text-[13px] font-bold text-white leading-snug line-clamp-2 block tracking-tight">
           {node.title}
         </span>
         {description && (
-          <span className="text-[11px] text-gray-500 leading-snug line-clamp-2 block mt-0.5">
+          <span className="text-[10px] leading-relaxed line-clamp-2 block mt-1" style={{ color: '#6b7280' }}>
             {description}
           </span>
         )}
       </div>
 
-      {/* Action row */}
+      {/* Expand / drill-down */}
       {hasChildren && (
-        <div className="flex items-center gap-1.5 px-2.5 pb-2.5">
+        <div className="flex items-center gap-1 px-2.5 pb-2.5">
           <button
             onClick={(e) => { e.stopPropagation(); toggleExpand(node.id) }}
             className={cn(
-              'flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md transition-all flex-1',
+              'flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg transition-all flex-1',
               isExpanded
-                ? 'bg-gray-700/60 text-gray-300 hover:bg-gray-700 hover:text-white'
-                : 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 hover:text-blue-300'
+                ? 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
+                : 'text-white/80 hover:text-white'
             )}
+            style={!isExpanded ? {
+              background: `linear-gradient(90deg, ${typeColor}30, ${typeColor}15)`,
+              border: `1px solid ${typeColor}30`,
+            } : undefined}
           >
-            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
             <span>{isExpanded ? '접기' : `${childCount}개 펼치기`}</span>
           </button>
 
           <button
             onClick={(e) => { e.stopPropagation(); enterDrillDown(node.id, node.title) }}
-            className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md text-gray-600 hover:text-blue-400 hover:bg-gray-700/60 transition-all opacity-0 group-hover:opacity-100"
+            className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+            style={{ color: '#6b7280' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = typeColor
+              e.currentTarget.style.background = typeColor + '20'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = '#6b7280'
+              e.currentTarget.style.background = 'transparent'
+            }}
             title="드릴다운"
           >
             <Search size={11} />
@@ -162,18 +200,17 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
         </div>
       )}
 
-      {/* Bottom color bar */}
-      <div className="h-1 w-full flex-shrink-0" style={{ backgroundColor: typeColor }} />
-
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-gray-600 !border-gray-500 !w-2.5 !h-2.5 !opacity-0 group-hover:!opacity-100 transition-opacity"
+        className="!border-0 !w-2.5 !h-2.5 !opacity-0 group-hover:!opacity-100 !transition-opacity"
+        style={{ backgroundColor: typeColor + '99' }}
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-gray-600 !border-gray-500 !w-2.5 !h-2.5 !opacity-0 group-hover:!opacity-100 transition-opacity"
+        className="!border-0 !w-2.5 !h-2.5 !opacity-0 group-hover:!opacity-100 !transition-opacity"
+        style={{ backgroundColor: typeColor + '99' }}
       />
     </div>
   )
