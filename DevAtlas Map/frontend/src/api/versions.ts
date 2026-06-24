@@ -11,4 +11,8 @@ export const versionsApi = {
     client.post<Version>(`/versions/${versionId}/fork`, data).then((r) => r.data),
   diff: (versionA: string, versionB: string) =>
     client.get<DiffResult>(`/versions/diff?version_a=${versionA}&version_b=${versionB}`).then((r) => r.data),
+  update: (versionId: string, data: { name: string }) =>
+    client.patch<Version>(`/versions/${versionId}`, data).then((r) => r.data),
+  delete: (versionId: string) =>
+    client.delete(`/versions/${versionId}`).then((r) => r.data),
 }

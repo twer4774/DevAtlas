@@ -33,6 +33,23 @@ export const useForkVersion = (projectId: string) => {
   })
 }
 
+export const useUpdateVersion = (projectId: string) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ versionId, name }: { versionId: string; name: string }) =>
+      versionsApi.update(versionId, { name }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['versions', projectId] }),
+  })
+}
+
+export const useDeleteVersion = (projectId: string) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (versionId: string) => versionsApi.delete(versionId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['versions', projectId] }),
+  })
+}
+
 export const useDiff = (versionA: string | null, versionB: string | null) =>
   useQuery({
     queryKey: ['diff', versionA, versionB],

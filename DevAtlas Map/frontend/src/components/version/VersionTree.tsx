@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { GitBranch, Plus, CheckCircle2 } from 'lucide-react'
-import { useVersions, useCreateVersion, useForkVersion } from '@/hooks/useVersions'
+import { GitBranch, Plus, CheckCircle2, Pencil, Trash2 } from 'lucide-react'
+import { useVersions, useCreateVersion, useForkVersion, useUpdateVersion, useDeleteVersion } from '@/hooks/useVersions'
 import { useProjectStore } from '@/store/projectStore'
 import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
@@ -16,9 +16,13 @@ export function VersionTree({ projectId }: Props) {
   const { activeVersionId, setActiveVersion } = useProjectStore()
   const createVersion = useCreateVersion(projectId)
   const forkVersion = useForkVersion(projectId)
+  const updateVersion = useUpdateVersion(projectId)
+  const deleteVersion = useDeleteVersion(projectId)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [forkOpen, setForkOpen] = useState<string | null>(null)
+  const [renameId, setRenameId] = useState<string | null>(null)
+  const [deleteVersionId, setDeleteVersionId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
 
   // 버전 목록 로드 후 activeVersion이 없으면 첫 번째 버전 자동 선택
@@ -42,6 +46,19 @@ export function VersionTree({ projectId }: Props) {
     setActiveVersion(v.id)
     setNewName('')
     setForkOpen(null)
+  }
+
+  const handleRename = async () => {
+    if (!renameId || !newName.trim()) return
+    await updateVersion.mutateAsync({ versionId: renameId, name: newName })
+    setRenameId(null)
+  }
+
+  const handleDeleteVersion = async () => {
+    if (!deleteVersionId) return
+    await deleteVersion.mutateAsync(deleteVersionId)
+    if (activeVersionId === deleteVersionId) setActiveVersion(null)
+    setDeleteVersionId(null)
   }
 
   return (
@@ -120,22 +137,59 @@ export function VersionTree({ projectId }: Props) {
                 )}
               </div>
 
-              <button
-                onClick={(e) => { e.stopPropagation(); setForkOpen(v.id); setNewName('') }}
-                className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-1 rounded transition-all"
-                style={{ color: '#6e7681' }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.color = '#c9d1d9'
-                  e.currentTarget.style.background = '#30363d'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = '#6e7681'
-                  e.currentTarget.style.background = 'transparent'
-                }}
-                title="Fork version"
-              >
-                <GitBranch size={11} />
-              </button>
+              <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 flex-shrink-0">
+                {/* Rename */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setRenameId(v.id); setNewName(v.name) }}
+                  className="p-1 rounded transition-all"
+                  style={{ color: '#6e7681' }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = '#c9d1d9'
+                    e.currentTarget.style.background = '#30363d'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = '#6e7681'
+                    e.currentTarget.style.background = 'transparent'
+                  }}
+                  title="버전 이름 변경"
+                >
+                  <Pencil size={11} />
+                </button>
+                {/* Fork */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setForkOpen(v.id); setNewName('') }}
+                  className="p-1 rounded transition-all"
+                  style={{ color: '#6e7681' }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = '#c9d1d9'
+                    e.currentTarget.style.background = '#30363d'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = '#6e7681'
+                    e.currentTarget.style.background = 'transparent'
+                  }}
+                  title="Fork version"
+                >
+                  <GitBranch size={11} />
+                </button>
+                {/* Delete */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDeleteVersionId(v.id) }}
+                  className="p-1 rounded transition-all"
+                  style={{ color: '#6e7681' }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = '#f85149'
+                    e.currentTarget.style.background = '#30363d'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = '#6e7681'
+                    e.currentTarget.style.background = 'transparent'
+                  }}
+                  title="버전 삭제"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
             </div>
           )
         })}
@@ -174,6 +228,34 @@ export function VersionTree({ projectId }: Props) {
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setForkOpen(null)}>취소</Button>
             <Button size="sm" onClick={handleFork} disabled={forkVersion.isPending}>Fork</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Rename modal */}
+      <Modal open={!!renameId} onClose={() => setRenameId(null)} title="버전 이름 변경">
+        <div className="space-y-4">
+          <input
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') handleRename() }}
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setRenameId(null)}>취소</Button>
+            <Button size="sm" onClick={handleRename} disabled={updateVersion.isPending}>변경</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete confirm modal */}
+      <Modal open={!!deleteVersionId} onClose={() => setDeleteVersionId(null)} title="버전 삭제">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-400">이 버전의 모든 노드와 데이터가 삭제됩니다. 계속하시겠습니까?</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setDeleteVersionId(null)}>취소</Button>
+            <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDeleteVersion} disabled={deleteVersion.isPending}>삭제</Button>
           </div>
         </div>
       </Modal>
