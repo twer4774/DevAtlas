@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import {
-  ZoomIn, ZoomOut, Maximize2, ChevronsDown, ChevronsRight,
-  Plus, Undo2, Redo2, Wand2, Keyboard, Filter, Settings2, RectangleHorizontal, FileText,
+  ZoomIn, ZoomOut, Maximize2, ChevronsDown, ChevronsUp,
+  Plus, Undo2, Redo2, Wand2, Keyboard, Filter, Spline, RectangleHorizontal, FileText,
   FolderOpen, Network,
 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
@@ -188,23 +188,34 @@ export function MapToolbar({ versionId }: Props) {
         </button>
         <div className="w-px h-4 bg-gray-700 mx-1" />
 
-        <button onClick={() => zoomOut()} className="p-1.5 text-gray-400 hover:text-white rounded transition-colors">
+        {/* Create */}
+        <button onClick={() => setAddOpen(true)} className="p-1.5 text-blue-400 hover:text-blue-300 rounded transition-colors" title="노드 추가">
+          <Plus size={15} />
+        </button>
+        <button onClick={() => setAddAreaOpen(true)} className="p-1.5 text-blue-400 hover:text-blue-300 rounded transition-colors" title="영역 추가">
+          <RectangleHorizontal size={15} />
+        </button>
+        <div className="w-px h-4 bg-gray-700 mx-1" />
+
+        {/* View / Zoom */}
+        <button onClick={() => zoomOut()} title="줌 아웃" className="p-1.5 text-gray-400 hover:text-white rounded transition-colors">
           <ZoomOut size={15} />
         </button>
-        <button onClick={() => zoomIn()} className="p-1.5 text-gray-400 hover:text-white rounded transition-colors">
+        <button onClick={() => zoomIn()} title="줌 인" className="p-1.5 text-gray-400 hover:text-white rounded transition-colors">
           <ZoomIn size={15} />
         </button>
-        <button onClick={() => fitView()} className="p-1.5 text-gray-400 hover:text-white rounded transition-colors">
+        <button onClick={() => fitView()} title="전체 보기" className="p-1.5 text-gray-400 hover:text-white rounded transition-colors">
           <Maximize2 size={15} />
         </button>
         <div className="w-px h-4 bg-gray-700 mx-1" />
+
+        {/* Expand / Collapse / Auto-layout */}
         <button onClick={handleExpand} className="p-1.5 text-gray-400 hover:text-white rounded transition-colors" title="모두 펼치기">
           <ChevronsDown size={15} />
         </button>
         <button onClick={collapseAll} className="p-1.5 text-gray-400 hover:text-white rounded transition-colors" title="모두 접기">
-          <ChevronsRight size={15} />
+          <ChevronsUp size={15} />
         </button>
-        <div className="w-px h-4 bg-gray-700 mx-1" />
         <button
           onClick={triggerAutoLayout}
           className="p-1.5 text-gray-400 hover:text-white rounded transition-colors"
@@ -235,15 +246,7 @@ export function MapToolbar({ versionId }: Props) {
           className="p-1.5 text-gray-400 hover:text-white rounded transition-colors"
           title="관계 타입 설정"
         >
-          <Settings2 size={15} />
-        </button>
-        <div className="w-px h-4 bg-gray-700 mx-1" />
-
-        <button onClick={() => setAddAreaOpen(true)} className="p-1.5 text-blue-400 hover:text-blue-300 rounded transition-colors" title="영역 추가">
-          <RectangleHorizontal size={15} />
-        </button>
-        <button onClick={() => setAddOpen(true)} className="p-1.5 text-blue-400 hover:text-blue-300 rounded transition-colors" title="노드 추가">
-          <Plus size={15} />
+          <Spline size={15} />
         </button>
         <div className="w-px h-4 bg-gray-700 mx-1" />
         <button
