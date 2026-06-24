@@ -10,6 +10,10 @@ class EdgeCreate(BaseModel):
     relation_type: str = "depends_on"
 
 
+class EdgeUpdate(BaseModel):
+    relation_type: str
+
+
 class EdgeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

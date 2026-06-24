@@ -9,6 +9,31 @@ import { z } from "zod/v4"
 
 import { apiErrorBody, devatlasRequest } from "./http.js"
 
+// ── Standard relation types (mirrors frontend constants.ts) ───────────────
+// contains   — 포함 관계 (그룹→자식, 시스템→컴포넌트)
+// realizes   — 구현 관계 (기능→기술 컴포넌트)
+// depends_on — 의존 관계 (A가 B를 호출/사용)
+// triggers   — 트리거 관계 (이벤트, 비동기 시작)
+// applies_to — 정책 적용 (Policy 노드→대상)
+// references — 참조 관계 (느슨한 언급)
+const RELATION_TYPES = [
+  `contains`, `realizes`, `depends_on`, `triggers`, `applies_to`, `references`,
+] as const
+type RelationType = typeof RELATION_TYPES[number]
+
+const RELATION_TYPE_DESC =
+  `Standard values: contains | realizes | depends_on | triggers | applies_to | references. ` +
+  `Custom strings are accepted but won't have distinct visual styling in the map.`
+
+// ── Coordinate system note (injected into node tool descriptions) ─────────
+const COORD_NOTE =
+  `Position coordinates: top-level nodes use absolute canvas coords (origin = top-left of canvas). ` +
+  `Group children use coords relative to the parent group's top-left corner. ` +
+  `When parent_id is set the position you provide is interpreted as relative. ` +
+  `Omit position to place at (0,0); the UI will auto-layout on next open.`
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
 const UUID = z.string().uuid()
 
 function okJson(data: unknown): CallToolResult {
@@ -42,17 +67,40 @@ async function runTool(
   }
 }
 
+/** Strip server-internal fields from edge objects before returning to AI context. */
+function trimEdge(e: Record<string, unknown>): Record<string, unknown> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { version_id, created_at, ...rest } = e
+  return rest
+}
+
+function applyEdgeTrim(raw: unknown): unknown {
+  if (Array.isArray(raw)) return raw.map(e => trimEdge(e as Record<string, unknown>))
+  if (raw && typeof raw === `object`) return trimEdge(raw as Record<string, unknown>)
+  return raw
+}
+
+// ── Server ────────────────────────────────────────────────────────────────
+
 const server = new McpServer(
-  { name: `devatlas-map`, version: `0.1.0` },
+  { name: `devatlas-map`, version: `0.2.0` },
   {
     instructions:
-      `This server controls DevAtlas Map (AKW) via HTTP. Configure DEVATLAS_API_BASE (default http://127.0.0.1:8000). ` +
-      `If the API is secured, set DEVATLAS_API_TOKEN to match the backend's DEVATLAS_API_TOKEN. ` +
-      `Use list_projects → list_versions → list_nodes/create_node as typical flow.`,
+      `Controls DevAtlas Map via HTTP. Configure DEVATLAS_API_BASE (default http://127.0.0.1:8000). ` +
+      `If secured, set DEVATLAS_API_TOKEN.\n\n` +
+      `Typical workflow: list_projects → list_versions → list_nodes / create_node → create_edge\n\n` +
+      `Finding node IDs: use search(q="name", type="nodes") to get IDs before calling create_edge. ` +
+      `Never guess UUIDs — wrong IDs return 404, not 500.\n\n` +
+      `Coordinates: top-level nodes use absolute canvas coords; group children use coords relative ` +
+      `to the parent group corner. Omit position to let the UI auto-place.\n\n` +
+      `Edge relation types: contains | realizes | depends_on | triggers | applies_to | references`,
   },
 )
 
-// ----- Projects -----
+// ═════════════════════════════════════════════════════════════════════════
+// Projects
+// ═════════════════════════════════════════════════════════════════════════
+
 server.registerTool(
   `list_projects`,
   { description: `List all projects.` },
@@ -81,7 +129,7 @@ server.registerTool(
 server.registerTool(
   `create_project`,
   {
-    description: `Create project (creator required per API schema).`,
+    description: `Create a project. creator is required.`,
     inputSchema: z.object({
       name: z.string().min(1),
       creator: z.string().min(1),
@@ -111,11 +159,7 @@ server.registerTool(
       description: z.string().optional(),
     }),
   },
-  async (args: {
-    project_id: string
-    name?: string
-    description?: string
-  }) =>
+  async (args: { project_id: string; name?: string; description?: string }) =>
     runTool(async () => {
       const patch: Record<string, unknown> = {}
       if (args.name !== undefined) patch.name = args.name
@@ -132,7 +176,7 @@ server.registerTool(
 server.registerTool(
   `delete_project`,
   {
-    description: `Delete project (no body returned).`,
+    description: `Delete project and all its data.`,
     inputSchema: z.object({ project_id: UUID }),
   },
   async (args: { project_id: string }) =>
@@ -146,11 +190,14 @@ server.registerTool(
     }),
 )
 
-// ----- Versions -----
+// ═════════════════════════════════════════════════════════════════════════
+// Versions
+// ═════════════════════════════════════════════════════════════════════════
+
 server.registerTool(
   `list_versions`,
   {
-    description: `List versions of a project.`,
+    description: `List all versions of a project.`,
     inputSchema: z.object({ project_id: UUID }),
   },
   async (args: { project_id: string }) =>
@@ -164,7 +211,7 @@ server.registerTool(
 server.registerTool(
   `get_version`,
   {
-    description: `Get single version.`,
+    description: `Get a single version.`,
     inputSchema: z.object({ version_id: UUID }),
   },
   async (args: { version_id: string }) =>
@@ -178,13 +225,12 @@ server.registerTool(
 server.registerTool(
   `create_version`,
   {
-    description: `Create a new version.`,
+    description: `Create a new version under a project.`,
     inputSchema: z.object({
       project_id: UUID,
       name: z.string().min(1),
       base_version_id: UUID.optional(),
-      /** ISO date "YYYY-MM-DD" */
-      release_date: z.string().optional(),
+      release_date: z.string().optional().describe(`ISO date "YYYY-MM-DD"`),
     }),
   },
   async (args: {
@@ -211,18 +257,14 @@ server.registerTool(
 server.registerTool(
   `fork_version`,
   {
-    description: `Fork an existing version into a new one.`,
+    description: `Copy an existing version into a new one (deep copy of all nodes and edges).`,
     inputSchema: z.object({
       version_id: UUID,
       name: z.string().min(1),
       release_date: z.string().optional(),
     }),
   },
-  async (args: {
-    version_id: string
-    name: string
-    release_date?: string
-  }) =>
+  async (args: { version_id: string; name: string; release_date?: string }) =>
     runTool(async () => {
       const body = JSON.stringify({
         name: args.name,
@@ -232,21 +274,6 @@ server.registerTool(
         method: `POST`,
         body,
       })
-      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
-      return okJson(await readJsonSafe(res))
-    }),
-)
-
-server.registerTool(
-  `compare_versions`,
-  {
-    description: `Diff two versions (nodes + edges).`,
-    inputSchema: z.object({ version_a: UUID, version_b: UUID }),
-  },
-  async (args: { version_a: string; version_b: string }) =>
-    runTool(async () => {
-      const q = `version_a=${args.version_a}&version_b=${args.version_b}`
-      const res = await devatlasRequest(`/versions/diff?${q}`)
       if (!res.ok) return errResult(await apiErrorBody(res), res.status)
       return okJson(await readJsonSafe(res))
     }),
@@ -279,7 +306,7 @@ server.registerTool(
 server.registerTool(
   `delete_version`,
   {
-    description: `Delete a version (no body returned).`,
+    description: `Delete a version and all its nodes/edges.`,
     inputSchema: z.object({ version_id: UUID }),
   },
   async (args: { version_id: string }) =>
@@ -293,11 +320,29 @@ server.registerTool(
     }),
 )
 
-// ----- Nodes -----
+server.registerTool(
+  `compare_versions`,
+  {
+    description: `Diff two versions — returns added/removed/changed nodes and edges.`,
+    inputSchema: z.object({ version_a: UUID, version_b: UUID }),
+  },
+  async (args: { version_a: string; version_b: string }) =>
+    runTool(async () => {
+      const q = `version_a=${args.version_a}&version_b=${args.version_b}`
+      const res = await devatlasRequest(`/versions/diff?${q}`)
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(await readJsonSafe(res))
+    }),
+)
+
+// ═════════════════════════════════════════════════════════════════════════
+// Nodes
+// ═════════════════════════════════════════════════════════════════════════
+
 server.registerTool(
   `list_nodes`,
   {
-    description: `List architecture nodes for a map version.`,
+    description: `List all architecture nodes for a version. Returns id, title, type, position, parent_id, metadata_.`,
     inputSchema: z.object({ version_id: UUID }),
   },
   async (args: { version_id: string }) =>
@@ -311,7 +356,7 @@ server.registerTool(
 server.registerTool(
   `get_node`,
   {
-    description: `Get a single node.`,
+    description: `Get a single node by UUID.`,
     inputSchema: z.object({ node_id: UUID }),
   },
   async (args: { node_id: string }) =>
@@ -327,14 +372,22 @@ const metadataSchema = z.record(z.string(), z.unknown()).optional()
 server.registerTool(
   `create_node`,
   {
-    description: `Create a node in a version. Use parent_id for group children. metadata_ uses key "metadata_" in JSON body per API.`,
+    description:
+      `Create a node in a version.\n\n` +
+      `type — concept types: Program | Capability | Feature | Policy | External. ` +
+      `Infrastructure types: backend | frontend | database | storage | cache | api | service | ` +
+      `gateway | broker | queue | function | worker | cloud-service | auth-service | network | device.\n\n` +
+      COORD_NOTE,
     inputSchema: z.object({
       version_id: UUID,
       title: z.string().min(1),
       type: z.string().min(1),
       position: z.object({ x: z.number(), y: z.number() }).optional(),
       metadata_: metadataSchema,
-      parent_id: UUID.optional().nullable(),
+      parent_id: UUID.optional().nullable().describe(
+        `Set to a group node's UUID to nest this node inside that group. ` +
+        `Position then becomes relative to the group's top-left corner.`,
+      ),
       reason: z.string().optional(),
       author: z.string().optional(),
     }),
@@ -371,7 +424,9 @@ server.registerTool(
 server.registerTool(
   `update_node`,
   {
-    description: `Patch node (title/type/position/metadata_/parent_id).`,
+    description:
+      `Patch node fields (title / type / position / metadata_ / parent_id).\n\n` +
+      COORD_NOTE,
     inputSchema: z.object({
       node_id: UUID,
       title: z.string().optional(),
@@ -414,18 +469,14 @@ server.registerTool(
 server.registerTool(
   `delete_node`,
   {
-    description: `Delete node. Optional reason/author query params.`,
+    description: `Delete a node (and any edges connected to it).`,
     inputSchema: z.object({
       node_id: UUID,
       reason: z.string().optional(),
       author: z.string().optional(),
     }),
   },
-  async (args: {
-    node_id: string
-    reason?: string
-    author?: string
-  }) =>
+  async (args: { node_id: string; reason?: string; author?: string }) =>
     runTool(async () => {
       const qs = new URLSearchParams({
         reason: args.reason ?? ``,
@@ -440,30 +491,51 @@ server.registerTool(
     }),
 )
 
-// ----- Edges -----
+// ═════════════════════════════════════════════════════════════════════════
+// Edges
+// ═════════════════════════════════════════════════════════════════════════
+
 server.registerTool(
   `list_edges`,
   {
-    description: `List edges for a version.`,
+    description: `List all edges for a version. Returns id, source_id, target_id, relation_type.`,
     inputSchema: z.object({ version_id: UUID }),
   },
   async (args: { version_id: string }) =>
     runTool(async () => {
       const res = await devatlasRequest(`/versions/${args.version_id}/edges`)
       if (!res.ok) return errResult(await apiErrorBody(res), res.status)
-      return okJson(await readJsonSafe(res))
+      return okJson(applyEdgeTrim(await readJsonSafe(res)))
+    }),
+)
+
+server.registerTool(
+  `get_edge`,
+  {
+    description: `Get a single edge by UUID.`,
+    inputSchema: z.object({ edge_id: UUID }),
+  },
+  async (args: { edge_id: string }) =>
+    runTool(async () => {
+      const res = await devatlasRequest(`/edges/${args.edge_id}`)
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(applyEdgeTrim(await readJsonSafe(res)))
     }),
 )
 
 server.registerTool(
   `create_edge`,
   {
-    description: `Connect two nodes (relation_type defaults to depends_on).`,
+    description:
+      `Connect two nodes with a directed edge.\n\n` +
+      `Before calling: use search(q="node name", type="nodes") to resolve node IDs ` +
+      `— do not guess UUIDs; an unknown ID returns 404.\n\n` +
+      `relation_type: ${RELATION_TYPE_DESC}`,
     inputSchema: z.object({
       version_id: UUID,
       source_id: UUID,
       target_id: UUID,
-      relation_type: z.string().optional(),
+      relation_type: z.string().optional().describe(RELATION_TYPE_DESC),
     }),
   },
   async (args: {
@@ -483,28 +555,37 @@ server.registerTool(
         body,
       })
       if (!res.ok) return errResult(await apiErrorBody(res), res.status)
-      return okJson(await readJsonSafe(res))
+      return okJson(applyEdgeTrim(await readJsonSafe(res)))
     }),
 )
 
 server.registerTool(
-  `get_edge`,
+  `update_edge`,
   {
-    description: `Get a single edge by id.`,
-    inputSchema: z.object({ edge_id: UUID }),
+    description:
+      `Change an edge's relation_type without deleting and recreating it.\n\n` +
+      `relation_type: ${RELATION_TYPE_DESC}`,
+    inputSchema: z.object({
+      edge_id: UUID,
+      relation_type: z.string().describe(RELATION_TYPE_DESC),
+    }),
   },
-  async (args: { edge_id: string }) =>
+  async (args: { edge_id: string; relation_type: string }) =>
     runTool(async () => {
-      const res = await devatlasRequest(`/edges/${args.edge_id}`)
+      const body = JSON.stringify({ relation_type: args.relation_type })
+      const res = await devatlasRequest(`/edges/${args.edge_id}`, {
+        method: `PATCH`,
+        body,
+      })
       if (!res.ok) return errResult(await apiErrorBody(res), res.status)
-      return okJson(await readJsonSafe(res))
+      return okJson(applyEdgeTrim(await readJsonSafe(res)))
     }),
 )
 
 server.registerTool(
   `delete_edge`,
   {
-    description: `Delete edge by id.`,
+    description: `Delete an edge by UUID.`,
     inputSchema: z.object({ edge_id: UUID }),
   },
   async (args: { edge_id: string }) =>
@@ -518,11 +599,18 @@ server.registerTool(
     }),
 )
 
-// ----- Search -----
+// ═════════════════════════════════════════════════════════════════════════
+// Search
+// ═════════════════════════════════════════════════════════════════════════
+
 server.registerTool(
   `search`,
   {
-    description: `Search nodes/documents/versions. type=all|nodes|documents|versions`,
+    description:
+      `Full-text search across nodes, documents, and versions.\n\n` +
+      `Primary use case: resolve a node name to its UUID before calling create_edge or update_node. ` +
+      `Use type="nodes" to filter to nodes only. Results include id, title, type, version_id.\n\n` +
+      `type: all | nodes | documents | versions`,
     inputSchema: z.object({
       q: z.string().min(1),
       project_id: UUID.optional(),
@@ -546,7 +634,10 @@ server.registerTool(
     }),
 )
 
-// ----- Documents -----
+// ═════════════════════════════════════════════════════════════════════════
+// Documents
+// ═════════════════════════════════════════════════════════════════════════
+
 server.registerTool(
   `list_version_documents`,
   {
@@ -578,7 +669,7 @@ server.registerTool(
 server.registerTool(
   `get_document`,
   {
-    description: `Fetch document metadata (includes presigned-ish content_url when applicable).`,
+    description: `Fetch document metadata (includes content_url when applicable).`,
     inputSchema: z.object({ doc_id: UUID }),
   },
   async (args: { doc_id: string }) =>
@@ -592,7 +683,9 @@ server.registerTool(
 server.registerTool(
   `upload_document`,
   {
-    description: `Upload a file as a new document (multipart). Reads file_path from local disk and POSTs to /documents/upload.`,
+    description:
+      `Upload a local file as a document (multipart). ` +
+      `doc type values: planning | policy | technical | api | adr`,
     inputSchema: z.object({
       project_id: UUID,
       type: z.string().min(1),
@@ -637,7 +730,9 @@ server.registerTool(
 server.registerTool(
   `create_document`,
   {
-    description: `Create a document record without file upload.`,
+    description:
+      `Create a document record without file upload. ` +
+      `doc type values: planning | policy | technical | api | adr`,
     inputSchema: z.object({
       project_id: UUID,
       type: z.string().min(1),
@@ -668,32 +763,9 @@ server.registerTool(
 )
 
 server.registerTool(
-  `link_document_to_nodes`,
-  {
-    description: `Patch linked_node_ids (replaces entire list).`,
-    inputSchema: z.object({
-      doc_id: UUID,
-      linked_node_ids: z.array(UUID),
-    }),
-  },
-  async (args: { doc_id: string; linked_node_ids: string[] }) =>
-    runTool(async () => {
-      const body = JSON.stringify({
-        linked_node_ids: args.linked_node_ids,
-      })
-      const res = await devatlasRequest(`/documents/${args.doc_id}`, {
-        method: `PATCH`,
-        body,
-      })
-      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
-      return okJson(await readJsonSafe(res))
-    }),
-)
-
-server.registerTool(
   `update_document`,
   {
-    description: `Patch document title/type/version_id.`,
+    description: `Patch document title / type / version_id / linked_node_ids.`,
     inputSchema: z.object({
       doc_id: UUID,
       title: z.string().optional(),
@@ -728,7 +800,7 @@ server.registerTool(
 server.registerTool(
   `delete_document`,
   {
-    description: `Delete document record.`,
+    description: `Delete a document record.`,
     inputSchema: z.object({ doc_id: UUID }),
   },
   async (args: { doc_id: string }) =>
@@ -813,31 +885,20 @@ server.registerTool(
         return (await readJsonSafe(res)) as { id: string } | null
       }
 
-      // 1. 전체 개요 문서
       const overallResult = await uploadMarkdown(
         args.overall_doc.title,
         args.overall_doc.content,
         [],
       )
       if (overallResult) {
-        results.push({
-          type: `overall`,
-          title: args.overall_doc.title,
-          doc_id: overallResult.id,
-        })
+        results.push({ type: `overall`, title: args.overall_doc.title, doc_id: overallResult.id })
       }
 
-      // 2. 노드별 문서 (병렬 업로드)
       await Promise.all(
         args.node_docs.map(async (nd) => {
           const result = await uploadMarkdown(nd.title, nd.content, [nd.node_id])
           if (result) {
-            results.push({
-              type: `node`,
-              title: nd.title,
-              doc_id: result.id,
-              node_id: nd.node_id,
-            })
+            results.push({ type: `node`, title: nd.title, doc_id: result.id, node_id: nd.node_id })
           }
         }),
       )
@@ -851,7 +912,10 @@ server.registerTool(
     }),
 )
 
-// ----- Resource: version summary -----
+// ═════════════════════════════════════════════════════════════════════════
+// Resources
+// ═════════════════════════════════════════════════════════════════════════
+
 const versionSummaryTemplate = new ResourceTemplate(
   `devatlas://versions/{version_id}/summary`,
   { list: undefined },
@@ -861,14 +925,13 @@ server.registerResource(
   `version_summary`,
   versionSummaryTemplate,
   {
-    description: `Minimal JSON overview: node/edge/doc counts per version.`,
+    description: `Compact JSON overview: node/edge/doc counts + first 30 node id:title pairs.`,
     mimeType: `application/json`,
   },
   async (uri: URL, variables: { version_id?: string }) => {
     const versionId = variables.version_id
-    if (!versionId) {
-      throw new Error(`Missing version_id in ${uri}`)
-    }
+    if (!versionId) throw new Error(`Missing version_id in ${uri}`)
+
     const vRes = await devatlasRequest(`/versions/${versionId}`)
     if (!vRes.ok) throw new Error(await apiErrorBody(vRes))
     const version = await readJsonSafe(vRes)
@@ -881,6 +944,7 @@ server.registerResource(
     if (!nRes.ok) throw new Error(await apiErrorBody(nRes))
     if (!eRes.ok) throw new Error(await apiErrorBody(eRes))
     if (!dRes.ok) throw new Error(await apiErrorBody(dRes))
+
     const nodes = (await readJsonSafe(nRes)) as { id?: string }[] | null
     const edges = (await readJsonSafe(eRes)) as unknown[] | null
     const docs = (await readJsonSafe(dRes)) as unknown[] | null
