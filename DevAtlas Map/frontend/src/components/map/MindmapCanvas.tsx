@@ -3,6 +3,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   useReactFlow,
@@ -688,6 +689,7 @@ function FlowInner({ versionId }: { versionId: string }) {
     <>
       <ReactFlow
         className={isDragging ? 'rf-dragging' : undefined}
+        style={{ background: 'radial-gradient(ellipse 90% 65% at 50% 35%, #0c1929 0%, #030810 80%)' }}
         nodes={rfNodes}
         edges={rfEdges}
         onNodesChange={handleNodesChange}
@@ -717,7 +719,7 @@ function FlowInner({ versionId }: { versionId: string }) {
           deletable: true,
         }}
       >
-        <Background color="#1f2937" gap={24} size={1} />
+        <Background variant={BackgroundVariant.Cross} color="#162032" gap={32} size={0.85} />
         <Controls
           className="!bg-gray-900 !border-gray-700 !shadow-xl"
           showInteractive={false}
@@ -795,7 +797,7 @@ interface Props {
 export function MindmapCanvas({ versionId }: Props) {
   return (
     <ReactFlowProvider>
-      <div className="h-full w-full relative bg-gray-950">
+      <div className="h-full w-full relative" style={{ background: '#030810' }}>
         <FlowInner versionId={versionId} />
       </div>
     </ReactFlowProvider>
