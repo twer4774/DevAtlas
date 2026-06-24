@@ -209,6 +209,7 @@ function FlowInner({ versionId }: { versionId: string }) {
   const { setActiveDocument } = useDocumentStore()
 
   const prevLayoutKeyRef = useRef<string>('')
+  const prevDrillRootRef = useRef<string | null>('')
   const isDraggingRef = useRef(false)
   const suppressNextLayoutRef = useRef(false)
   const lastDragEndTimeRef = useRef<number>(0)
@@ -282,12 +283,15 @@ function FlowInner({ versionId }: { versionId: string }) {
   const layoutKey = `${layoutNodes.length}-${layoutEdges.length}-${drillRootId ?? ''}`
   useEffect(() => {
     if (layoutKey === prevLayoutKeyRef.current) return
+    const drillChanged = drillRootId !== prevDrillRootRef.current
+    const isInitial = prevLayoutKeyRef.current === ''
     prevLayoutKeyRef.current = layoutKey
-    // 드래그 완료 후 1s 이내에는 fitView를 건너뜀 — 사용자가 줌인한 상태를 유지
+    prevDrillRootRef.current = drillRootId
+    // 최초 로드 또는 드릴다운 변경 시에만 fitView — 펼치기/접기는 뷰 고정
+    if (!isInitial && !drillChanged) return
     if (isDraggingRef.current || Date.now() - lastDragEndTimeRef.current < 1000) return
     const t = setTimeout(() => fitView({ duration: 500, padding: 0.18 }), 30)
     return () => clearTimeout(t)
-  // fitView는 useReactFlow에서 stable reference이므로 deps 제외 (unstable일 경우 spurious 재실행 방지)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutKey])
 
