@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import {
   Layers, Target, Zap, Shield, ExternalLink,
-  Box, ChevronRight, ChevronDown, Search, Server,
+  Box, ChevronRight, ChevronDown, Server,
   Database, Archive, Globe, Radio, Workflow, Cloud,
   Lock, Cpu, HardDrive, List, ArrowRightLeft, Code, Cog, Network,
 } from 'lucide-react'
@@ -52,7 +52,7 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as ArchNodeData
   const { node, hasChildren, childCount, isAncestorHighlighted } = nodeData
-  const { expandedNodeIds, toggleExpand, enterDrillDown } = useMapStore()
+  const { expandedNodeIds, toggleExpand } = useMapStore()
   const { isDiffMode, diffResult } = useDiffStore()
 
   const isExpanded = expandedNodeIds.has(node.id)
@@ -181,22 +181,6 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
             <span>{isExpanded ? '접기' : `${childCount}개 펼치기`}</span>
           </button>
 
-          <button
-            onClick={(e) => { e.stopPropagation(); enterDrillDown(node.id, node.title) }}
-            className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-            style={{ color: '#6b7280' }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = typeColor
-              e.currentTarget.style.background = typeColor + '20'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = '#6b7280'
-              e.currentTarget.style.background = 'transparent'
-            }}
-            title="드릴다운"
-          >
-            <Search size={11} />
-          </button>
         </div>
       )}
 

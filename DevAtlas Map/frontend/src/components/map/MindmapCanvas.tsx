@@ -146,21 +146,22 @@ function MiniMapNodeWithLabel(props: {
   )
 }
 
-function getSubtree(nodes: ArchitectureNode[], edges: NodeEdge[], rootId: string): ArchitectureNode[] {
-  const result: ArchitectureNode[] = []
-  const nodeMap = new Map(nodes.map(n => [n.id, n]))
-  const queue = [rootId]
-  const visited = new Set<string>()
-  while (queue.length > 0) {
-    const id = queue.shift()!
-    if (visited.has(id)) continue
-    visited.add(id)
-    const node = nodeMap.get(id)
-    if (!node) continue
-    result.push(node)
-    edges.filter(e => e.source_id === id).forEach(e => queue.push(e.target_id))
-  }
-  return result
+// Group drill-down: group node + its children + nodes directly connected to those children
+function getGroupSubtree(nodes: ArchitectureNode[], edges: NodeEdge[], groupId: string): ArchitectureNode[] {
+  const groupNode = nodes.find(n => n.id === groupId)
+  const children = nodes.filter(n => n.parent_id === groupId)
+  const childIds = new Set(children.map(n => n.id))
+
+  const externalIds = new Set<string>()
+  edges.forEach(e => {
+    if (childIds.has(e.source_id) && !childIds.has(e.target_id) && e.target_id !== groupId)
+      externalIds.add(e.target_id)
+    if (childIds.has(e.target_id) && !childIds.has(e.source_id) && e.source_id !== groupId)
+      externalIds.add(e.source_id)
+  })
+
+  const externalNodes = nodes.filter(n => externalIds.has(n.id))
+  return [...(groupNode ? [groupNode] : []), ...children, ...externalNodes]
 }
 
 function getDescendantIds(edges: NodeEdge[], parentId: string): Set<string> {
@@ -251,7 +252,11 @@ function FlowInner({ versionId }: { versionId: string }) {
   const visibleNodes = useMemo(() => {
     if (!rawNodes) return []
     if (!drillRootId) return rawNodes
-    return getSubtree(rawNodes, rawEdges ?? [], drillRootId)
+    const drillRoot = rawNodes.find(n => n.id === drillRootId)
+    if (drillRoot?.type === 'group') {
+      return getGroupSubtree(rawNodes, rawEdges ?? [], drillRootId)
+    }
+    return rawNodes // non-group drill-down no longer supported via UI
   }, [rawNodes, rawEdges, drillRootId])
 
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(

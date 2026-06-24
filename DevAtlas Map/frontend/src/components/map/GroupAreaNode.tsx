@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
 import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
-import { LayoutDashboard, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Trash2, Maximize2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { nodesApi } from '@/api/nodes'
 import { useUpdateNode, useDeleteNode } from '@/hooks/useNodes'
@@ -28,7 +28,7 @@ export const GroupAreaNode = memo(({ data, selected }: NodeProps) => {
   const [draftTitle, setDraftTitle] = useState(node.title)
   const updateNode = useUpdateNode(node.version_id)
   const deleteNode = useDeleteNode(node.version_id)
-  const { setSelectedNode } = useMapStore()
+  const { setSelectedNode, enterDrillDown } = useMapStore()
 
   const saveTitle = () => {
     if (draftTitle.trim() && draftTitle !== node.title) {
@@ -54,7 +54,7 @@ export const GroupAreaNode = memo(({ data, selected }: NodeProps) => {
       />
 
       <div
-        className={cn('h-full w-full rounded-xl border-2 border-dashed transition-colors')}
+        className={cn('h-full w-full rounded-xl border-2 border-dashed transition-colors group')}
         style={{
           backgroundColor: color.bg,
           borderColor: selected ? color.text : color.border,
@@ -93,6 +93,20 @@ export const GroupAreaNode = memo(({ data, selected }: NodeProps) => {
             >
               {node.metadata_?.description as string}
             </span>
+          )}
+
+          {/* 집중해서 보기 — hover 시 표시 */}
+          {!editing && (
+            <button
+              className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded opacity-0 group-hover:opacity-100 transition-all"
+              style={{ color: color.text + '99' }}
+              onClick={e => { e.stopPropagation(); enterDrillDown(node.id, node.title) }}
+              onMouseEnter={e => { e.currentTarget.style.color = color.text; e.currentTarget.style.background = color.border + '55' }}
+              onMouseLeave={e => { e.currentTarget.style.color = color.text + '99'; e.currentTarget.style.background = 'transparent' }}
+              title="이 영역 집중해서 보기"
+            >
+              <Maximize2 size={10} />
+            </button>
           )}
 
           {/* 색상 선택 + 삭제 — 선택 시 표시 */}
