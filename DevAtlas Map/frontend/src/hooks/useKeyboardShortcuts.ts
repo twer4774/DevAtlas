@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useHistory } from '@/hooks/useHistory'
-import { useDeleteNode } from '@/hooks/useNodes'
 import { useMapStore } from '@/store/mapStore'
 import { useToastStore } from '@/store/toastStore'
 
@@ -11,10 +10,10 @@ function isEditingText(): boolean {
 
 export function useKeyboardShortcuts(versionId: string | null) {
   const { undo, redo, canUndo, canRedo } = useHistory()
-  const deleteNode = useDeleteNode(versionId ?? '')
   const { selectedNodeId, setSelectedNode } = useMapStore()
   const { add: addToast } = useToastStore()
   const triggerAutoLayout = useMapStore(s => s.triggerAutoLayout)
+  const setPendingDeleteNode = useMapStore(s => s.setPendingDeleteNode)
 
   useEffect(() => {
     if (!versionId) return
@@ -54,10 +53,7 @@ export function useKeyboardShortcuts(versionId: string | null) {
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId) {
         if (isEditingText()) return
         e.preventDefault()
-        if (window.confirm('선택한 노드를 삭제하시겠습니까?')) {
-          deleteNode.mutate({ id: selectedNodeId, reason: '키보드 삭제', author: 'user' })
-          setSelectedNode(null)
-        }
+        setPendingDeleteNode(selectedNodeId)
         return
       }
 
@@ -70,5 +66,5 @@ export function useKeyboardShortcuts(versionId: string | null) {
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [versionId, canUndo, canRedo, undo, redo, selectedNodeId, deleteNode, setSelectedNode, addToast, triggerAutoLayout])
+  }, [versionId, canUndo, canRedo, undo, redo, selectedNodeId, setSelectedNode, addToast, triggerAutoLayout, setPendingDeleteNode])
 }
