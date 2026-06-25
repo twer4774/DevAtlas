@@ -226,6 +226,7 @@ function FlowInner({ versionId }: { versionId: string }) {
   const childMovedRef = useRef<Map<string, { x: number; y: number }>>(new Map())
   const pendingNodeChangesRef = useRef<NodeChange<Node>[] | null>(null)
   const nodesChangeRafRef = useRef<number | null>(null)
+  const dragOverGroupIdRef = useRef<string | null>(null)
 
   const rawNodesRef = useRef<ArchitectureNode[]>([])
   const rawEdgesRef = useRef<NodeEdge[]>([])
@@ -353,6 +354,42 @@ function FlowInner({ versionId }: { versionId: string }) {
   }, [pendingAutoLayout]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── 드래그 핸들러 ──────────────────────────────────────────
+  // 드래그 중 노드가 어느 그룹 위에 있는지 감지해 isDragTarget 시각 피드백 제공
+  const detectHoverGroup = useCallback((node: Node): string | null => {
+    if (node.type !== 'archNode') return null
+    const allNodes = rawNodesRef.current
+    const groupNodes = allNodes.filter(n => n.type === 'group')
+    const parentRF = node.parentId ? getNode(node.parentId) : null
+    const globalPos = parentRF
+      ? { x: parentRF.position.x + node.position.x, y: parentRF.position.y + node.position.y }
+      : node.position
+    const cx = globalPos.x + NODE_W / 2
+    const cy = globalPos.y + 60
+    const found = groupNodes.find(g => {
+      const gRF = getNode(g.id)
+      const gx = gRF?.position.x ?? (g.position as { x: number; y: number }).x
+      const gy = gRF?.position.y ?? (g.position as { x: number; y: number }).y
+      const gw = (g.metadata_?.width as number) ?? 500
+      const gh = (g.metadata_?.height as number) ?? 380
+      return cx > gx && cx < gx + gw && cy > gy && cy < gy + gh
+    })
+    return found?.id ?? null
+  }, [getNode])
+
+  const onNodeDrag = useCallback((_: React.MouseEvent, node: Node) => {
+    const newGroupId = detectHoverGroup(node)
+    const prev = dragOverGroupIdRef.current
+    if (newGroupId === prev) return
+    dragOverGroupIdRef.current = newGroupId
+    setNodes(nodes => nodes.map(n => {
+      if (n.type !== 'groupArea') return n
+      if (n.id === prev || n.id === newGroupId) {
+        return { ...n, data: { ...n.data, isDragTarget: n.id === newGroupId } }
+      }
+      return n
+    }))
+  }, [detectHoverGroup, setNodes])
+
   const onNodeDragStart = useCallback((evt: React.MouseEvent, node: Node) => {
     // 드래그 중 5초 refetch가 완료되어 캐시를 덮어쓰면 drag-stop 시 snap-back 발생.
     // 드래그 시작 시 진행 중인 쿼리를 취소해 이 race condition을 방지한다.
@@ -360,6 +397,7 @@ function FlowInner({ versionId }: { versionId: string }) {
 
     isDraggingRef.current = true
     setIsDragging(true)
+    dragOverGroupIdRef.current = null
     dragStartPosRef.current = { x: node.position.x, y: node.position.y }
     childMovedRef.current = new Map()
 
@@ -435,6 +473,13 @@ function FlowInner({ versionId }: { versionId: string }) {
       lastDragEndTimeRef.current = Date.now()
       suppressNextLayoutRef.current = true
       setIsDragging(false)
+      // 드래그 타겟 하이라이트 해제
+      dragOverGroupIdRef.current = null
+      setNodes(prev => prev.map(n =>
+        n.type === 'groupArea' && (n.data as { isDragTarget?: boolean }).isDragTarget
+          ? { ...n, data: { ...n.data, isDragTarget: false } }
+          : n
+      ))
       if (nodesChangeRafRef.current != null) {
         cancelAnimationFrame(nodesChangeRafRef.current)
         nodesChangeRafRef.current = null
@@ -519,11 +564,15 @@ function FlowInner({ versionId }: { versionId: string }) {
 
       if (nextGroupId !== prevGroupId) {
         if (nextGroupId) {
-          // Assign to group: convert global pos to relative
+          // Assign to (new) group: convert global pos to relative
           const groupRF = getNode(nextGroupId)
-          const gPos = groupRF?.position ?? targetGroup!.position
+          const gPos = groupRF?.position ?? (targetGroup!.position as { x: number; y: number })
           const relPos = { x: globalPos.x - gPos.x, y: globalPos.y - gPos.y }
           save(node.id, relPos, { parent_id: nextGroupId })
+          // RF 상태 즉시 업데이트 — suppressNextLayout이 풀릴 때까지의 스냅백 방지
+          setNodes(prev => prev.map(n =>
+            n.id === node.id ? { ...n, parentId: nextGroupId, position: relPos } : n
+          ))
         } else if (!prevIsGroupArea) {
           // Non-group semantic parent: just save absolute position, preserve parent_id
           save(node.id, node.position)
@@ -531,6 +580,9 @@ function FlowInner({ versionId }: { versionId: string }) {
         } else {
           // Remove from group: use computed global pos
           save(node.id, globalPos, { parent_id: null })
+          setNodes(prev => prev.map(n =>
+            n.id === node.id ? { ...n, parentId: undefined, position: globalPos } : n
+          ))
         }
         // IMPORTANT: do not refetch immediately here.
         // We already updated the cache optimistically via setQueryData in save().
@@ -712,6 +764,7 @@ function FlowInner({ versionId }: { versionId: string }) {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}

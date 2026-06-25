@@ -8,6 +8,7 @@ import type { ArchitectureNode } from '@/types'
 
 interface GroupAreaData {
   node: ArchitectureNode
+  isDragTarget?: boolean
   [key: string]: unknown
 }
 
@@ -20,7 +21,7 @@ const COLORS = [
 ]
 
 export const GroupAreaNode = memo(({ data, selected }: NodeProps) => {
-  const { node } = data as GroupAreaData
+  const { node, isDragTarget } = data as GroupAreaData
   const colorIdx = (node.metadata_?.colorIdx as number) ?? 0
   const color = COLORS[colorIdx % COLORS.length]
   const [editing, setEditing] = useState(false)
@@ -37,10 +38,14 @@ export const GroupAreaNode = memo(({ data, selected }: NodeProps) => {
     setEditing(false)
   }
 
-  const borderColor = selected ? color.text + 'cc' : color.border
-  const boxShadow = selected
-    ? `0 0 0 1px ${color.text}33, inset 0 0 60px ${color.text}0a, 0 8px 32px rgba(0,0,0,0.35)`
-    : `inset 0 0 40px ${color.text}07, 0 4px 20px rgba(0,0,0,0.25)`
+  const borderColor = isDragTarget
+    ? color.text + 'ee'
+    : selected ? color.text + 'cc' : color.border
+  const boxShadow = isDragTarget
+    ? `0 0 0 2px ${color.text}55, inset 0 0 80px ${color.text}18, 0 8px 32px rgba(0,0,0,0.4)`
+    : selected
+      ? `0 0 0 1px ${color.text}33, inset 0 0 60px ${color.text}0a, 0 8px 32px rgba(0,0,0,0.35)`
+      : `inset 0 0 40px ${color.text}07, 0 4px 20px rgba(0,0,0,0.25)`
 
   return (
     <>

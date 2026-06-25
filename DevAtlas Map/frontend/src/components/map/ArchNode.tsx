@@ -102,107 +102,105 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
   const nodeOpacity = (isDimmedBySelection && !nodeHovered) ? 0.5 : 1
 
   return (
+    // overflow-hidden을 내부 wrapper로 분리 → Handle이 클리핑되지 않음
     <div
-      className={cn(
-        'relative flex flex-col w-[210px] rounded-xl overflow-hidden',
-        'will-change-transform transition-shadow duration-150 group',
-      )}
-      style={{
-        background: diffBg || `linear-gradient(145deg, ${typeColor}12 0%, #0d1117 55%)`,
-        border,
-        boxShadow,
-        opacity: nodeOpacity,
-        transition: 'opacity 0.2s',
-      }}
+      className={cn('relative w-[210px] rounded-xl group will-change-transform')}
+      style={{ border, boxShadow, opacity: nodeOpacity, transition: 'opacity 0.2s' }}
       onMouseEnter={() => setNodeHovered(true)}
       onMouseLeave={() => setNodeHovered(false)}
     >
-      {/* Top accent bar */}
+      {/* 콘텐츠 영역 — rounded + overflow-hidden을 여기에만 적용 */}
       <div
-        className="h-[2px] w-full flex-shrink-0"
-        style={{ background: `linear-gradient(90deg, ${typeColor}cc 0%, ${typeColor}00 100%)` }}
-      />
-
-      {/* Header: icon + type label + status */}
-      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
+        className="flex flex-col rounded-xl overflow-hidden"
+        style={{ background: diffBg || `linear-gradient(145deg, ${typeColor}12 0%, #0d1117 55%)` }}
+      >
+        {/* Top accent bar */}
         <div
-          className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
-          style={{
-            backgroundColor: typeColor + '20',
-            border: `1px solid ${typeColor}40`,
-            color: typeColor,
-          }}
-        >
-          <Icon size={14} strokeWidth={1.8} />
-        </div>
+          className="h-[2px] w-full flex-shrink-0"
+          style={{ background: `linear-gradient(90deg, ${typeColor}cc 0%, ${typeColor}00 100%)` }}
+        />
 
-        <span
-          className="text-[9px] font-bold uppercase tracking-widest flex-1 truncate"
-          style={{ color: typeColor + 'bb' }}
-        >
-          {typeLabel}
-        </span>
-
-        {statusLabel && statusColor && (
-          <span
-            className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-none flex-shrink-0"
+        {/* Header: icon + type label + status */}
+        <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
+          <div
+            className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
             style={{
-              backgroundColor: statusColor + '20',
-              border: `1px solid ${statusColor}40`,
-              color: statusColor,
+              backgroundColor: typeColor + '20',
+              border: `1px solid ${typeColor}40`,
+              color: typeColor,
             }}
           >
-            {statusLabel}
-          </span>
-        )}
-      </div>
+            <Icon size={14} strokeWidth={1.8} />
+          </div>
 
-      {/* Title + description */}
-      <div className="px-3 pb-2">
-        <span className="text-[13px] font-bold text-white leading-snug line-clamp-2 block tracking-tight">
-          {node.title}
-        </span>
-        {description && (
-          <span className="text-[10px] leading-relaxed line-clamp-2 block mt-1" style={{ color: '#6b7280' }}>
-            {description}
-          </span>
-        )}
-      </div>
-
-      {/* Expand / drill-down */}
-      {hasChildren && (
-        <div className="flex items-center gap-1 px-2.5 pb-2.5">
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleExpand(node.id) }}
-            className={cn(
-              'flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg transition-all flex-1',
-              isExpanded
-                ? 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
-                : 'text-white/80 hover:text-white'
-            )}
-            style={!isExpanded ? {
-              background: `linear-gradient(90deg, ${typeColor}30, ${typeColor}15)`,
-              border: `1px solid ${typeColor}30`,
-            } : undefined}
+          <span
+            className="text-[9px] font-bold uppercase tracking-widest flex-1 truncate"
+            style={{ color: typeColor + 'bb' }}
           >
-            {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-            <span>{isExpanded ? '접기' : `${childCount}개 펼치기`}</span>
-          </button>
+            {typeLabel}
+          </span>
 
+          {statusLabel && statusColor && (
+            <span
+              className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-none flex-shrink-0"
+              style={{
+                backgroundColor: statusColor + '20',
+                border: `1px solid ${statusColor}40`,
+                color: statusColor,
+              }}
+            >
+              {statusLabel}
+            </span>
+          )}
         </div>
-      )}
 
+        {/* Title + description */}
+        <div className="px-3 pb-2">
+          <span className="text-[13px] font-bold text-white leading-snug line-clamp-2 block tracking-tight">
+            {node.title}
+          </span>
+          {description && (
+            <span className="text-[10px] leading-relaxed line-clamp-2 block mt-1" style={{ color: '#6b7280' }}>
+              {description}
+            </span>
+          )}
+        </div>
+
+        {/* Expand / drill-down */}
+        {hasChildren && (
+          <div className="flex items-center gap-1 px-2.5 pb-2.5">
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleExpand(node.id) }}
+              className={cn(
+                'flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg transition-all flex-1',
+                isExpanded
+                  ? 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
+                  : 'text-white/80 hover:text-white'
+              )}
+              style={!isExpanded ? {
+                background: `linear-gradient(90deg, ${typeColor}30, ${typeColor}15)`,
+                border: `1px solid ${typeColor}30`,
+              } : undefined}
+            >
+              {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+              <span>{isExpanded ? '접기' : `${childCount}개 펼치기`}</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Handle은 overflow-hidden 바깥 — 클리핑 없이 완전히 표시됨 */}
       <Handle
         type="target"
         position={Position.Left}
-        className="!border-0 !w-2.5 !h-2.5 !opacity-0 group-hover:!opacity-100 !transition-opacity"
-        style={{ backgroundColor: typeColor + '99' }}
+        className="!border-0 !w-3 !h-3 !opacity-0 group-hover:!opacity-100 !transition-opacity"
+        style={{ backgroundColor: typeColor + 'cc' }}
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!border-0 !w-2.5 !h-2.5 !opacity-0 group-hover:!opacity-100 !transition-opacity"
-        style={{ backgroundColor: typeColor + '99' }}
+        className="!border-0 !w-3 !h-3 !opacity-0 group-hover:!opacity-100 !transition-opacity"
+        style={{ backgroundColor: typeColor + 'cc' }}
       />
     </div>
   )
