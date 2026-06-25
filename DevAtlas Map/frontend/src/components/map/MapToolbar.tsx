@@ -6,7 +6,6 @@ import {
   FolderOpen, Network, Download, Search,
 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
-import { useUIStore } from '@/store/uiStore'
 import { useEdgeFilterStore } from '@/store/edgeFilterStore'
 import { useRelationTypeStore } from '@/store/relationTypeStore'
 import { useQueryClient } from '@tanstack/react-query'
@@ -50,9 +49,10 @@ const SHORTCUTS = [
 
 interface Props {
   versionId: string
+  onSearchOpen?: () => void
 }
 
-export function MapToolbar({ versionId }: Props) {
+export function MapToolbar({ versionId, onSearchOpen }: Props) {
   const { zoomIn, zoomOut, fitView, getNodes, getEdges, getViewport } = useReactFlow()
   const { expandAll, collapseAll, triggerAutoLayout } = useMapStore()
   const { hiddenTypes, toggleType, showAll } = useEdgeFilterStore()
@@ -66,7 +66,6 @@ export function MapToolbar({ versionId }: Props) {
   const { data: docs } = useVersionDocuments(versionId)
   const { setActiveDocument, startNewDocument } = useDocumentStore()
   const { setSelectedNode, setPendingFocusNode } = useMapStore()
-  const { openSearch } = useUIStore()
 
   const [addOpen, setAddOpen] = useState(false)
   const [addAreaOpen, setAddAreaOpen] = useState(false)
@@ -240,8 +239,8 @@ export function MapToolbar({ versionId }: Props) {
 
         {/* Search */}
         <button
-          onClick={openSearch}
-          title="검색 (⌘K)"
+          onClick={onSearchOpen}
+          title="노드 검색 (⌘K)"
           className="p-1.5 text-gray-400 hover:text-white rounded transition-colors"
         >
           <Search size={15} />

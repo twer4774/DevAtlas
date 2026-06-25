@@ -29,12 +29,9 @@ export function SearchOverlay() {
   }, [searchOpen])
 
   useEffect(() => {
+    if (!searchOpen) return
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        searchOpen ? closeSearch() : useUIStore.getState().openSearch()
-      }
-      if (e.key === 'Escape' && searchOpen) closeSearch()
+      if (e.key === 'Escape') closeSearch()
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)

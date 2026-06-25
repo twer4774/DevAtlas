@@ -36,6 +36,7 @@ import { GroupAreaNode } from './GroupAreaNode'
 import { RelationEdge } from './RelationEdge'
 import { MapToolbar } from './MapToolbar'
 import { DrillBreadcrumb } from './DrillBreadcrumb'
+import { NodeSearchBar } from './NodeSearchBar'
 import { Spinner } from '@/components/common/Spinner'
 import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
@@ -674,6 +675,19 @@ function FlowInner({ versionId }: { versionId: string }) {
   )
 
 
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   const isLoading = nodesLoading || edgesLoading
 
   if (isLoading) {
@@ -747,7 +761,12 @@ function FlowInner({ versionId }: { versionId: string }) {
         </div>
       )}
       <DrillBreadcrumb />
-      <MapToolbar versionId={versionId} />
+      <MapToolbar versionId={versionId} onSearchOpen={() => setSearchOpen(true)} />
+      <NodeSearchBar
+        nodes={rawNodes ?? []}
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+      />
 
       {/* 엣지 타입 선택 모달 */}
       <Modal
