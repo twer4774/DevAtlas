@@ -669,12 +669,49 @@ export function NodePropertiesPanel({ projectId, versionId }: Props) {
                 <p className="text-xs text-gray-400">{String(node.metadata_.tech)}</p>
               </div>
             )}
-            {childCount > 0 && (
-              <div>
-                <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">하위 노드</label>
-                <p className="text-xs text-gray-400">{childCount}개</p>
-              </div>
-            )}
+            {/* 연결된 노드 목록 */}
+            {(() => {
+              const outgoing = (edges ?? []).filter(e => e.source_id === node.id)
+              const incoming = (edges ?? []).filter(e => e.target_id === node.id)
+              if (!outgoing.length && !incoming.length) return null
+              return (
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">연결된 노드</label>
+                  <div className="space-y-1">
+                    {outgoing.map(e => {
+                      const target = nodes?.find(n => n.id === e.target_id)
+                      if (!target) return null
+                      return (
+                        <button
+                          key={e.id}
+                          onClick={() => { setSelectedNode(target.id); setPendingFocusNode(target.id) }}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-gray-800 transition-colors group"
+                        >
+                          <span className="text-gray-600 text-[10px] font-mono flex-shrink-0">→</span>
+                          <span className="text-xs text-gray-300 truncate flex-1 group-hover:text-white">{target.title}</span>
+                          <span className="text-[9px] text-gray-600 flex-shrink-0 truncate max-w-[60px]">{e.relation_type}</span>
+                        </button>
+                      )
+                    })}
+                    {incoming.map(e => {
+                      const source = nodes?.find(n => n.id === e.source_id)
+                      if (!source) return null
+                      return (
+                        <button
+                          key={e.id}
+                          onClick={() => { setSelectedNode(source.id); setPendingFocusNode(source.id) }}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-gray-800 transition-colors group"
+                        >
+                          <span className="text-gray-600 text-[10px] font-mono flex-shrink-0">←</span>
+                          <span className="text-xs text-gray-300 truncate flex-1 group-hover:text-white">{source.title}</span>
+                          <span className="text-[9px] text-gray-600 flex-shrink-0 truncate max-w-[60px]">{e.relation_type}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
             <div>
               <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">마지막 수정</label>
               <p className="text-xs text-gray-400">

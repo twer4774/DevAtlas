@@ -39,11 +39,11 @@ const GROUP_INNER_X = 20
 const GROUP_INNER_Y = 52
 
 const SHORTCUTS = [
+  { keys: ['⌘', 'K'], label: '노드 검색' },
   { keys: ['⌘', 'Z'], label: '실행 취소' },
   { keys: ['⌘', '⇧', 'Z'], label: '다시 실행' },
   { keys: ['⌘', '⇧', 'L'], label: '자동 정렬' },
   { keys: ['Delete'], label: '선택 노드 삭제' },
-  { keys: ['Backspace'], label: '선택 노드 삭제' },
   { keys: ['Esc'], label: '선택 해제' },
 ]
 

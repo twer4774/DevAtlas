@@ -23,7 +23,7 @@ const selectStyle = {
 
 export function DiffSelector({ projectId }: Props) {
   const { data: versions } = useVersions(projectId)
-  const { isDiffMode, setDiffResult, clearDiff } = useDiffStore()
+  const { isDiffMode, diffResult, setDiffResult, clearDiff } = useDiffStore()
   const [versionA, setVersionA] = useState('')
   const [versionB, setVersionB] = useState('')
   const [expanded, setExpanded] = useState(false)
@@ -41,19 +41,37 @@ export function DiffSelector({ projectId }: Props) {
 
   if (isDiffMode) {
     return (
-      <div className="mx-3 mt-2 mb-1 flex items-center gap-2 px-3 py-2 rounded-lg"
-        style={{ background: '#2d1f00', border: '1px solid #3d2d00' }}>
-        <GitCompare size={12} style={{ color: '#e3b341', flexShrink: 0 }} />
-        <span className="text-xs flex-1 font-medium" style={{ color: '#e3b341' }}>Diff 모드 활성</span>
-        <button
-          onClick={clearDiff}
-          className="p-0.5 rounded transition-colors"
-          style={{ color: '#6e7681' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#c9d1d9')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#6e7681')}
-        >
-          <X size={12} />
-        </button>
+      <div className="mx-3 mt-2 mb-1 rounded-lg overflow-hidden"
+        style={{ border: '1px solid #3d2d00' }}>
+        <div className="flex items-center gap-2 px-3 py-2" style={{ background: '#2d1f00' }}>
+          <GitCompare size={12} style={{ color: '#e3b341', flexShrink: 0 }} />
+          <span className="text-xs flex-1 font-medium" style={{ color: '#e3b341' }}>Diff 모드 활성</span>
+          <button
+            onClick={clearDiff}
+            className="p-0.5 rounded transition-colors"
+            style={{ color: '#6e7681' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#c9d1d9')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#6e7681')}
+          >
+            <X size={12} />
+          </button>
+        </div>
+        {diffResult && (
+          <div className="flex items-center gap-1 px-3 py-1.5" style={{ background: '#1c1400' }}>
+            <span className="text-[11px] font-mono font-semibold" style={{ color: '#3fb950' }}>
+              +{diffResult.added.length}
+            </span>
+            <span className="text-[10px]" style={{ color: '#484f58' }}>/</span>
+            <span className="text-[11px] font-mono font-semibold" style={{ color: '#f85149' }}>
+              -{diffResult.deleted.length}
+            </span>
+            <span className="text-[10px]" style={{ color: '#484f58' }}>/</span>
+            <span className="text-[11px] font-mono font-semibold" style={{ color: '#e3b341' }}>
+              ~{diffResult.changed.length}
+            </span>
+            <span className="text-[10px] ml-1" style={{ color: '#484f58' }}>노드</span>
+          </div>
+        )}
       </div>
     )
   }
