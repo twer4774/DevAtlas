@@ -6,6 +6,7 @@ import {
   FolderOpen, Network, Download, Search,
 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
+import { useUIStore } from '@/store/uiStore'
 import { useEdgeFilterStore } from '@/store/edgeFilterStore'
 import { useRelationTypeStore } from '@/store/relationTypeStore'
 import { useQueryClient } from '@tanstack/react-query'
@@ -49,10 +50,9 @@ const SHORTCUTS = [
 
 interface Props {
   versionId: string
-  onSearchOpen?: () => void
 }
 
-export function MapToolbar({ versionId, onSearchOpen }: Props) {
+export function MapToolbar({ versionId }: Props) {
   const { zoomIn, zoomOut, fitView, getNodes, getEdges, getViewport } = useReactFlow()
   const { expandAll, collapseAll, triggerAutoLayout } = useMapStore()
   const { hiddenTypes, toggleType, showAll } = useEdgeFilterStore()
@@ -66,6 +66,7 @@ export function MapToolbar({ versionId, onSearchOpen }: Props) {
   const { data: docs } = useVersionDocuments(versionId)
   const { setActiveDocument, startNewDocument } = useDocumentStore()
   const { setSelectedNode, setPendingFocusNode } = useMapStore()
+  const { openSearch } = useUIStore()
 
   const [addOpen, setAddOpen] = useState(false)
   const [addAreaOpen, setAddAreaOpen] = useState(false)
@@ -238,15 +239,13 @@ export function MapToolbar({ versionId, onSearchOpen }: Props) {
         <div className="w-px h-4 bg-gray-700 mx-1" />
 
         {/* Search */}
-        {onSearchOpen && (
-          <button
-            onClick={onSearchOpen}
-            title="노드 검색 (⌘K)"
-            className="p-1.5 text-gray-400 hover:text-white rounded transition-colors"
-          >
-            <Search size={15} />
-          </button>
-        )}
+        <button
+          onClick={openSearch}
+          title="검색 (⌘K)"
+          className="p-1.5 text-gray-400 hover:text-white rounded transition-colors"
+        >
+          <Search size={15} />
+        </button>
         <div className="w-px h-4 bg-gray-700 mx-1" />
 
         {/* View / Zoom */}

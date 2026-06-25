@@ -34,6 +34,7 @@ export function SearchOverlay() {
         e.preventDefault()
         searchOpen ? closeSearch() : useUIStore.getState().openSearch()
       }
+      if (e.key === 'Escape' && searchOpen) closeSearch()
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
