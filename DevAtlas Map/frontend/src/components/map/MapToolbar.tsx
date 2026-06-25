@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import {
   ZoomIn, ZoomOut, Maximize2, ChevronsDown, ChevronsUp,
@@ -50,9 +50,11 @@ const SHORTCUTS = [
 interface Props {
   versionId: string
   onSearchOpen?: () => void
+  initialAction?: 'node' | 'area' | null
+  onInitialActionConsumed?: () => void
 }
 
-export function MapToolbar({ versionId, onSearchOpen }: Props) {
+export function MapToolbar({ versionId, onSearchOpen, initialAction, onInitialActionConsumed }: Props) {
   const { zoomIn, zoomOut, fitView, getNodes, getEdges, getViewport } = useReactFlow()
   const { expandAll, collapseAll, triggerAutoLayout } = useMapStore()
   const { hiddenTypes, toggleType, showAll } = useEdgeFilterStore()
@@ -88,6 +90,11 @@ export function MapToolbar({ versionId, onSearchOpen }: Props) {
 
   const { drillRootId, selectedNodeId, setPendingDeleteNode } = useMapStore()
   const hasActiveFilter = hiddenTypes.size > 0
+
+  useEffect(() => {
+    if (initialAction === 'node') { setAddOpen(true); onInitialActionConsumed?.() }
+    else if (initialAction === 'area') { setAddAreaOpen(true); onInitialActionConsumed?.() }
+  }, [initialAction]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleExpand = () => {
     const all = nodes ?? []

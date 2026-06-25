@@ -14,6 +14,7 @@ import {
 } from '@/lib/constants'
 import { useMapStore } from '@/store/mapStore'
 import { useDiffStore } from '@/store/diffStore'
+import { useUpdateNode } from '@/hooks/useNodes'
 import type { ArchitectureNode } from '@/types'
 
 interface ArchNodeData {
@@ -55,6 +56,18 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
   const { expandedNodeIds, toggleExpand, selectedNodeId } = useMapStore()
   const { isDiffMode, diffResult } = useDiffStore()
   const [nodeHovered, setNodeHovered] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [draftTitle, setDraftTitle] = useState(node.title)
+  const updateNode = useUpdateNode(node.version_id)
+
+  const commitEdit = () => {
+    const trimmed = draftTitle.trim()
+    if (trimmed && trimmed !== node.title) {
+      updateNode.mutate({ id: node.id, title: trimmed })
+    }
+    setEditing(false)
+  }
+  const cancelEdit = () => { setDraftTitle(node.title); setEditing(false) }
 
   const isExpanded = expandedNodeIds.has(node.id)
   const typeColor = getNodeTypeColor(node.type)
@@ -154,12 +167,32 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
           )}
         </div>
 
-        {/* Title + description */}
-        <div className="px-3 pb-2">
-          <span className="text-[13px] font-bold text-white leading-snug line-clamp-2 block tracking-tight">
-            {node.title}
-          </span>
-          {description && (
+        {/* Title + description — 더블클릭으로 인라인 편집 */}
+        <div
+          className="px-3 pb-2"
+          onDoubleClick={(e) => { e.stopPropagation(); setDraftTitle(node.title); setEditing(true) }}
+        >
+          {editing ? (
+            <input
+              autoFocus
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commitEdit() }
+                if (e.key === 'Escape') cancelEdit()
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full bg-transparent text-[13px] font-bold text-white leading-snug tracking-tight outline-none border-b pb-0.5"
+              style={{ borderColor: 'rgba(255,255,255,0.35)' }}
+            />
+          ) : (
+            <span className="text-[13px] font-bold text-white leading-snug line-clamp-2 block tracking-tight cursor-text" title="더블클릭으로 편집">
+              {node.title}
+            </span>
+          )}
+          {!editing && description && (
             <span className="text-[10px] leading-relaxed line-clamp-2 block mt-1" style={{ color: '#6b7280' }}>
               {description}
             </span>

@@ -41,6 +41,7 @@ import { Spinner } from '@/components/common/Spinner'
 import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
 import { getNodeTypeColor } from '@/lib/constants'
+import { Plus, RectangleHorizontal, GitBranch } from 'lucide-react'
 import type { ArchitectureNode, NodeEdge } from '@/types'
 
 const nodeTypes: NodeTypes = { archNode: ArchNodeComponent, groupArea: GroupAreaNode }
@@ -728,6 +729,7 @@ function FlowInner({ versionId }: { versionId: string }) {
 
 
   const [searchOpen, setSearchOpen] = useState(false)
+  const [onboardingAction, setOnboardingAction] = useState<'node' | 'area' | null>(null)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -805,16 +807,59 @@ function FlowInner({ versionId }: { versionId: string }) {
         />
       </ReactFlow>
       {showEmptyHint && (
-        <div
-          className="pointer-events-none absolute inset-0 z-[5] flex flex-col items-center justify-center text-gray-500"
-          aria-hidden
-        >
-          <p className="text-sm">노드가 없습니다</p>
-          <p className="text-xs mt-1">위 툴바에서 루트 노드를 추가하세요</p>
+        <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center gap-5 max-w-xs text-center">
+            {/* 아이콘 */}
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)' }}
+            >
+              <GitBranch size={26} style={{ color: '#60a5fa' }} />
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[15px] font-semibold text-gray-200">아키텍처 맵이 비어있습니다</p>
+              <p className="text-[13px] text-gray-500 leading-relaxed">
+                노드를 추가하고 연결해 시스템 구조를<br />시각화해보세요
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setOnboardingAction('node')}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium transition-all"
+                style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.28)', color: '#60a5fa' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.2)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.12)' }}
+              >
+                <Plus size={13} />
+                노드 추가
+              </button>
+              <button
+                onClick={() => setOnboardingAction('area')}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium transition-all"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#6b7280' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+              >
+                <RectangleHorizontal size={13} />
+                영역 추가
+              </button>
+            </div>
+
+            <p className="text-[11px] text-gray-700">
+              툴바 버튼이나 <kbd className="px-1 py-0.5 rounded text-[10px] bg-gray-800 border border-gray-700 text-gray-500">⌘K</kbd> 검색으로도 노드를 관리할 수 있습니다
+            </p>
+          </div>
         </div>
       )}
       <DrillBreadcrumb />
-      <MapToolbar versionId={versionId} onSearchOpen={() => setSearchOpen(true)} />
+      <MapToolbar
+        versionId={versionId}
+        onSearchOpen={() => setSearchOpen(true)}
+        initialAction={onboardingAction}
+        onInitialActionConsumed={() => setOnboardingAction(null)}
+      />
       <NodeSearchBar
         nodes={rawNodes ?? []}
         open={searchOpen}
