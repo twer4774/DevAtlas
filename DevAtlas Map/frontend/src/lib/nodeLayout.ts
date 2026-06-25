@@ -253,7 +253,8 @@ export function buildLayout(
       g.setNode(groupNode.id, { width: newW, height: newH })
     })
   } else {
-    // 저장된 자식 위치를 기반으로 그룹 크기를 자식 bounding box에 맞게 계산
+    // 렌더에서 실제로 배치되는 좌표(저장된 위치 or fallback)로 bounding box 계산
+    // → 노드 추가/삭제 시 영역이 자동으로 늘어나거나 줄어듦
     topLevelGroups.forEach(groupNode => {
       const children = childrenByGroup.get(groupNode.id)
       if (!children || children.length === 0) return
@@ -263,17 +264,13 @@ export function buildLayout(
 
       children.forEach((n, idx) => {
         const childH = estimateHeight(n, (outgoingCount.get(n.id) ?? 0) > 0)
-        if (n.position) {
-          const pos = n.position as { x: number; y: number }
-          maxRight = Math.max(maxRight, pos.x + NODE_W)
-          maxBottom = Math.max(maxBottom, pos.y + childH)
-        } else {
-          // 저장된 위치 없을 때 fallback 스택 레이아웃 기준
-          maxRight = Math.max(maxRight, GROUP_PAD_X + NODE_W)
-          maxBottom = GROUP_PAD_TOP + children.reduce((acc, cn, i) => {
-            return acc + estimateHeight(cn, (outgoingCount.get(cn.id) ?? 0) > 0) + (i < children.length - 1 ? 16 : 0)
-          }, 0)
-        }
+        // 렌더 출력과 동일한 로직: 저장된 위치 없으면 idx 기반 fallback
+        const pos = n.position
+          ? (n.position as { x: number; y: number })
+          : { x: GROUP_PAD_X, y: GROUP_PAD_TOP + idx * (childH + 16) }
+
+        maxRight = Math.max(maxRight, pos.x + NODE_W)
+        maxBottom = Math.max(maxBottom, pos.y + childH)
       })
 
       const newW = maxRight + GROUP_PAD_X

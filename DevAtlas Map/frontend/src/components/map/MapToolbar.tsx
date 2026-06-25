@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react'
 import {
   ZoomIn, ZoomOut, Maximize2, ChevronsDown, ChevronsUp,
   Plus, Undo2, Redo2, Wand2, Keyboard, Filter, Spline, RectangleHorizontal, FileText,
-  FolderOpen, Network, Download, Search,
+  FolderOpen, Network, Download, Search, Trash2,
 } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { useEdgeFilterStore } from '@/store/edgeFilterStore'
@@ -86,7 +86,7 @@ export function MapToolbar({ versionId, onSearchOpen }: Props) {
     { label: '회색', text: '#9ca3af' },
   ]
 
-  const { drillRootId, selectedNodeId } = useMapStore()
+  const { drillRootId, selectedNodeId, setPendingDeleteNode } = useMapStore()
   const hasActiveFilter = hiddenTypes.size > 0
 
   const handleExpand = () => {
@@ -234,6 +234,17 @@ export function MapToolbar({ versionId, onSearchOpen }: Props) {
         </button>
         <button onClick={() => setAddAreaOpen(true)} className="p-1.5 text-blue-400 hover:text-blue-300 rounded transition-colors" title="영역 추가">
           <RectangleHorizontal size={15} />
+        </button>
+        <button
+          onClick={() => selectedNodeId && setPendingDeleteNode(selectedNodeId)}
+          disabled={!selectedNodeId}
+          title="선택 노드 삭제 (Delete)"
+          className={cn(
+            'p-1.5 rounded transition-colors',
+            selectedNodeId ? 'text-red-500 hover:text-red-400' : 'text-gray-700 cursor-not-allowed'
+          )}
+        >
+          <Trash2 size={15} />
         </button>
         <div className="w-px h-4 bg-gray-700 mx-1" />
 

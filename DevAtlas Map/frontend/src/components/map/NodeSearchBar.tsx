@@ -66,6 +66,14 @@ export function NodeSearchBar({ nodes, open, onClose }: Props) {
 
   useEffect(() => { setActiveIdx(0) }, [query])
 
+  // 전역 Esc 핸들러 — input 포커스 유무와 무관하게 닫힘
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose])
+
   // 활성 항목이 뷰포트 안에 오도록 스크롤
   useEffect(() => {
     const item = listRef.current?.children[activeIdx] as HTMLElement | undefined

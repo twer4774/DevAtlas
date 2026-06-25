@@ -1,7 +1,7 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { MindmapCanvas } from '@/components/map/MindmapCanvas'
 import { useMapStore } from '@/store/mapStore'
-import { useDeleteNode } from '@/hooks/useNodes'
+import { useDeleteNode, useNodes } from '@/hooks/useNodes'
 import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
 
@@ -12,10 +12,14 @@ interface Props {
 export function CenterPanel({ versionId }: Props) {
   const { pendingDeleteNodeId, setPendingDeleteNode, setSelectedNode } = useMapStore()
   const deleteNode = useDeleteNode(versionId ?? '')
+  const { data: nodes } = useNodes(versionId ?? '')
+
+  const pendingNode = nodes?.find(n => n.id === pendingDeleteNodeId)
+  const isGroup = pendingNode?.type === 'group'
 
   const handleConfirmDelete = () => {
     if (!pendingDeleteNodeId) return
-    deleteNode.mutate({ id: pendingDeleteNodeId, reason: '키보드 삭제', author: 'user' })
+    deleteNode.mutate({ id: pendingDeleteNodeId, reason: isGroup ? '영역 삭제' : '키보드 삭제', author: 'user' })
     setSelectedNode(null)
     setPendingDeleteNode(null)
   }
@@ -35,10 +39,14 @@ export function CenterPanel({ versionId }: Props) {
       <Modal
         open={!!pendingDeleteNodeId}
         onClose={() => setPendingDeleteNode(null)}
-        title="노드 삭제"
+        title={isGroup ? '영역 삭제' : '노드 삭제'}
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-400">선택한 노드를 삭제하시겠습니까?</p>
+          <p className="text-sm text-gray-400">
+            {isGroup
+              ? '영역을 삭제하시겠습니까? 영역 안의 노드는 삭제되지 않습니다.'
+              : '선택한 노드를 삭제하시겠습니까?'}
+          </p>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setPendingDeleteNode(null)}>취소</Button>
             <Button
