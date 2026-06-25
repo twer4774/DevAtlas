@@ -252,6 +252,35 @@ export function buildLayout(
       // Update outer Dagre node with computed dimensions before layout runs
       g.setNode(groupNode.id, { width: newW, height: newH })
     })
+  } else {
+    // 저장된 자식 위치를 기반으로 그룹 크기를 자식 bounding box에 맞게 계산
+    topLevelGroups.forEach(groupNode => {
+      const children = childrenByGroup.get(groupNode.id)
+      if (!children || children.length === 0) return
+
+      let maxRight = 0
+      let maxBottom = 0
+
+      children.forEach((n, idx) => {
+        const childH = estimateHeight(n, (outgoingCount.get(n.id) ?? 0) > 0)
+        if (n.position) {
+          const pos = n.position as { x: number; y: number }
+          maxRight = Math.max(maxRight, pos.x + NODE_W)
+          maxBottom = Math.max(maxBottom, pos.y + childH)
+        } else {
+          // 저장된 위치 없을 때 fallback 스택 레이아웃 기준
+          maxRight = Math.max(maxRight, GROUP_PAD_X + NODE_W)
+          maxBottom = GROUP_PAD_TOP + children.reduce((acc, cn, i) => {
+            return acc + estimateHeight(cn, (outgoingCount.get(cn.id) ?? 0) > 0) + (i < children.length - 1 ? 16 : 0)
+          }, 0)
+        }
+      })
+
+      const newW = maxRight + GROUP_PAD_X
+      const newH = maxBottom + GROUP_PAD_BOT
+      computedGroupDims.set(groupNode.id, { width: newW, height: newH })
+      g.setNode(groupNode.id, { width: newW, height: newH })
+    })
   }
 
   dagre.layout(g)
