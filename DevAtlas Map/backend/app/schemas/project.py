@@ -23,3 +23,4 @@ class ProjectResponse(BaseModel):
     description: str | None
     creator: str
     created_at: datetime
+    org_id: str | None = None

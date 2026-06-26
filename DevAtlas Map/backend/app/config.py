@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     # Env: DEVATLAS_API_TOKEN (see pydantic-settings env naming)
     devatlas_api_token: str | None = None
 
+    jwt_secret_key: str = "change-me-in-production"
+    jwt_algorithm: str = "HS256"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",")]

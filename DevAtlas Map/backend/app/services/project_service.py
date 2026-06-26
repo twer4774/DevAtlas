@@ -8,16 +8,21 @@ from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
-async def create_project(db: AsyncSession, data: ProjectCreate) -> Project:
+async def create_project(db: AsyncSession, data: ProjectCreate, org_id: str | None = None) -> Project:
     project = Project(**data.model_dump())
+    if org_id is not None:
+        project.org_id = org_id
     db.add(project)
     await db.commit()
     await db.refresh(project)
     return project
 
 
-async def get_projects(db: AsyncSession) -> list[Project]:
-    result = await db.execute(select(Project).order_by(Project.created_at.desc()))
+async def get_projects(db: AsyncSession, org_id: str | None = None) -> list[Project]:
+    stmt = select(Project)
+    if org_id is not None:
+        stmt = stmt.where(Project.org_id == org_id)
+    result = await db.execute(stmt.order_by(Project.created_at.desc()))
     return list(result.scalars().all())
 
 

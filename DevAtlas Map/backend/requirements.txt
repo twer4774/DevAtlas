@@ -1,0 +1,116 @@
+alembic==1.18.4
+    # via akw-backend
+annotated-doc==0.0.4
+    # via fastapi
+annotated-types==0.7.0
+    # via pydantic
+anyio==4.13.0
+    # via
+    #   starlette
+    #   watchfiles
+asyncpg==0.31.0
+    # via akw-backend
+boto3==1.42.93
+    # via akw-backend
+botocore==1.42.93
+    # via
+    #   boto3
+    #   s3transfer
+cffi==2.0.0 ; platform_python_implementation != 'PyPy'
+    # via cryptography
+click==8.3.2
+    # via uvicorn
+colorama==0.4.6 ; sys_platform == 'win32'
+    # via
+    #   click
+    #   uvicorn
+cryptography==49.0.0
+    # via python-jose
+ecdsa==0.19.2
+    # via python-jose
+fastapi==0.136.0
+    # via akw-backend
+greenlet==3.4.0
+    # via sqlalchemy
+h11==0.16.0
+    # via uvicorn
+httptools==0.7.1
+    # via uvicorn
+idna==3.12
+    # via anyio
+jmespath==1.1.0
+    # via
+    #   boto3
+    #   botocore
+mako==1.3.11
+    # via alembic
+markupsafe==3.0.3
+    # via mako
+psycopg2-binary==2.9.12
+    # via akw-backend
+pyasn1==0.6.3
+    # via
+    #   python-jose
+    #   rsa
+pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+    # via cffi
+pydantic==2.13.3
+    # via
+    #   akw-backend
+    #   fastapi
+    #   pydantic-settings
+pydantic-core==2.46.3
+    # via pydantic
+pydantic-settings==2.14.0
+    # via akw-backend
+python-dateutil==2.9.0.post0
+    # via botocore
+python-dotenv==1.2.2
+    # via
+    #   pydantic-settings
+    #   uvicorn
+python-jose==3.5.0
+    # via akw-backend
+python-multipart==0.0.26
+    # via akw-backend
+pyyaml==6.0.3
+    # via uvicorn
+rsa==4.9.1
+    # via python-jose
+s3transfer==0.16.0
+    # via boto3
+six==1.17.0
+    # via
+    #   ecdsa
+    #   python-dateutil
+sqlalchemy==2.0.49
+    # via
+    #   akw-backend
+    #   alembic
+starlette==1.0.0
+    # via fastapi
+typing-extensions==4.15.0
+    # via
+    #   alembic
+    #   anyio
+    #   fastapi
+    #   pydantic
+    #   pydantic-core
+    #   sqlalchemy
+    #   starlette
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via
+    #   fastapi
+    #   pydantic
+    #   pydantic-settings
+urllib3==2.6.3
+    # via botocore
+uvicorn==0.45.0
+    # via akw-backend
+uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
+    # via uvicorn
+watchfiles==1.1.1
+    # via uvicorn
+websockets==16.0
+    # via uvicorn

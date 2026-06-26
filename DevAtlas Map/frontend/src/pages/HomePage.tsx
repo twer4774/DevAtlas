@@ -7,6 +7,7 @@ import { useUIStore } from '@/store/uiStore'
 import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
 import { Spinner } from '@/components/common/Spinner'
+import { AuthBadge } from '@/components/layout/AuthBadge'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
@@ -40,10 +41,11 @@ export function HomePage() {
     <div className="min-h-screen bg-gray-950 text-white">
       <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">ArchMap</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Architecture Knowledge Workspace</p>
+          <h1 className="text-xl font-bold text-white">DevAtlas Map</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Architecture Visualization</p>
         </div>
         <div className="flex items-center gap-2">
+          <AuthBadge />
           <Button variant="ghost" size="sm" onClick={openSearch}>
             <Search size={14} />
             검색

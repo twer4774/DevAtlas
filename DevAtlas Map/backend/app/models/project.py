@@ -16,6 +16,7 @@ class Project(Base):
     description: Mapped[str | None] = mapped_column(Text)
     creator: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    org_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
     versions: Mapped[list["Version"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     documents: Mapped[list["Document"]] = relationship(back_populates="project", cascade="all, delete-orphan")

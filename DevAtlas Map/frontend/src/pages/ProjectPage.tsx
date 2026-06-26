@@ -16,6 +16,7 @@ import { useMapStore } from '@/store/mapStore'
 import { LeftPanel } from '@/components/layout/LeftPanel'
 import { CenterPanel } from '@/components/layout/CenterPanel'
 import { RightPanel } from '@/components/layout/RightPanel'
+import { AuthBadge } from '@/components/layout/AuthBadge'
 
 export function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -52,7 +53,8 @@ export function ProjectPage() {
             — {activeVersion.name}
           </span>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          <AuthBadge />
           <button
             onClick={openSearch}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors px-2 py-1 rounded hover:bg-gray-800"
