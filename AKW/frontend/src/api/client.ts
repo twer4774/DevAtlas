@@ -35,6 +35,11 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (res) => res,
   (err) => {
+    if (err.response?.status === 401) {
+      clearToken()
+      window.location.href = 'http://localhost:5174/login'
+      return new Promise(() => {})
+    }
     const message = err.response?.data?.detail ?? err.message
     return Promise.reject(new Error(message))
   }

@@ -29,6 +29,15 @@ async def create_template(
     return await template_service.create_template(body.model_dump(), current_user.id, session)
 
 
+@router.get("/type/{issue_type}", response_model=list[TemplateResponse])
+async def list_templates_by_type(
+    issue_type: str,
+    session: AsyncSession = Depends(get_session),
+    _=Depends(get_current_user),
+):
+    return await template_service.list_templates(session, issue_type)
+
+
 @router.get("/{template_id}", response_model=TemplateResponse)
 async def get_template(
     template_id: uuid.UUID,

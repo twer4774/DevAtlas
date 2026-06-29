@@ -1,4 +1,4 @@
-# DevAtlas Map MCP 서버
+# AKW MCP 서버
 
 [AKW FastAPI](../backend) REST API를 [Model Context Protocol](https://modelcontextprotocol.io/) 도구로 노출합니다. **Cursor**, Claude Desktop 등 MCP 클라이언트에서 프로젝트·버전·노드·엣지·문서를 조회/생성할 수 있습니다.
 
@@ -50,7 +50,7 @@ npm run dev
 ```json
 {
   "mcpServers": {
-    "devatlas-map": {
+    "akw": {
       "command": "node",
       "args": [
         "/절대경로/DevAtlas/DevAtlas Map/mcp-server/dist/index.js"

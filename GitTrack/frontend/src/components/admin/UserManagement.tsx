@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { User } from '../../types'
 import { RoleBadge, AdminOnly } from '../auth/RoleGuard';
 import { usePermissions } from '../../hooks/usePermissions';
+import { getPortalToken } from '../../services/apiClient';
 
 interface UserManagementProps {
   className?: string;
@@ -21,7 +22,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ className = '' }
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = getPortalToken() || localStorage.getItem('token');
       const response = await fetch('/api/admin/users', {
         headers: {
           'Authorization': `Bearer ${token}`,

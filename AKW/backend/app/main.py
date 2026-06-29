@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import projects, versions, nodes, edges, documents, changelog, search
+from app.routers import projects, versions, nodes, edges, documents, changelog, search, policies
 
 
 @asynccontextmanager
@@ -12,7 +12,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="DevAtlas Map API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="AKW API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +29,7 @@ app.include_router(edges.router)
 app.include_router(documents.router)
 app.include_router(changelog.router)
 app.include_router(search.router)
+app.include_router(policies.router)
 
 
 @app.get("/health")

@@ -7,6 +7,7 @@ import { Eye, EyeOff, Save, X } from 'lucide-react';
 import { User, Template } from '../../types';
 import { EnhancedProject } from '../../types/project-groups';
 import { issueService } from '../../services/issueService';
+import { getPortalToken } from '../../services/apiClient';
 import { projectService } from '../../services/projectService';
 import { templateService } from '../../services/templateService';
 import { attachmentService } from '../../services/attachmentService';
@@ -109,7 +110,7 @@ export const CreateIssueForm: React.FC<CreateIssueFormProps> = ({
           // Create a user service to get actual users from the database
           const userService = {
             async getUsers() {
-              const token = localStorage.getItem('token');
+              const token = getPortalToken() || localStorage.getItem('token');
               const response = await fetch(`${'/api'}/admin/users`, {
                 headers: {
                   'Authorization': `Bearer ${token}`,

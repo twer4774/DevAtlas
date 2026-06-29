@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * DevAtlas Map MCP server — wraps the AKW FastAPI REST API for Cursor/other MCP clients.
+ * AKW (Architecture Knowledge Workspace) MCP server — wraps the AKW FastAPI REST API for Cursor/other MCP clients.
  */
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js"
@@ -83,14 +83,18 @@ function applyEdgeTrim(raw: unknown): unknown {
 // ── Server ────────────────────────────────────────────────────────────────
 
 const server = new McpServer(
-  { name: `devatlas-map`, version: `0.2.0` },
+  { name: `akw`, version: `0.2.0` },
   {
     instructions:
-      `Controls DevAtlas Map via HTTP. Configure DEVATLAS_API_BASE (default http://127.0.0.1:8000). ` +
+      `Controls AKW (Architecture Knowledge Workspace) via HTTP. Configure DEVATLAS_API_BASE (default http://127.0.0.1:8000). ` +
       `If secured, set DEVATLAS_API_TOKEN.\n\n` +
       `Typical workflow: list_projects → list_versions → list_nodes / create_node → create_edge\n\n` +
-      `Finding node IDs: use search(q="name", type="nodes") to get IDs before calling create_edge. ` +
-      `Never guess UUIDs — wrong IDs return 404, not 500.\n\n` +
+      `Finding node IDs for edges: call list_nodes(version_id) to get all node IDs at once, ` +
+      `or search(q="name", type="nodes") to find a specific node. Never guess UUIDs.\n\n` +
+      `Creating areas/groups (영역): use create_node with type="group". Set metadata_: {width, height} ` +
+      `for the container size. Place child nodes inside by setting their parent_id to the group UUID.\n\n` +
+      `Creating documents with content: use write_document for a single document with inline markdown. ` +
+      `For bulk (one doc per node), use create_idea_documents.\n\n` +
       `Coordinates: top-level nodes use absolute canvas coords; group children use coords relative ` +
       `to the parent group corner. Omit position to let the UI auto-place.\n\n` +
       `Edge relation types: contains | realizes | depends_on | triggers | applies_to | references`,
@@ -377,6 +381,9 @@ server.registerTool(
       `type — concept types: Program | Capability | Feature | Policy | External. ` +
       `Infrastructure types: backend | frontend | database | storage | cache | api | service | ` +
       `gateway | broker | queue | function | worker | cloud-service | auth-service | network | device.\n\n` +
+      `Visual area/container: group — renders as a resizable box that other nodes can be placed inside. ` +
+      `For group nodes set metadata_: { width: <px>, height: <px> } (e.g. 400×300). ` +
+      `After creating a group, set child nodes' parent_id to the group UUID.\n\n` +
       COORD_NOTE,
     inputSchema: z.object({
       version_id: UUID,
@@ -528,8 +535,10 @@ server.registerTool(
   {
     description:
       `Connect two nodes with a directed edge.\n\n` +
-      `Before calling: use search(q="node name", type="nodes") to resolve node IDs ` +
-      `— do not guess UUIDs; an unknown ID returns 404.\n\n` +
+      `Before calling: call list_nodes(version_id) to get all node IDs at once, ` +
+      `or search(q="node name", type="nodes") for a specific node. ` +
+      `If you just created a node, its id is in the create_node response — use that directly. ` +
+      `Never guess UUIDs; an unknown ID returns 404.\n\n` +
       `relation_type: ${RELATION_TYPE_DESC}`,
     inputSchema: z.object({
       version_id: UUID,
@@ -763,6 +772,53 @@ server.registerTool(
 )
 
 server.registerTool(
+  `write_document`,
+  {
+    description:
+      `Create a document with inline markdown content — no local file required. ` +
+      `Use this to write a single document from text you already have. ` +
+      `For bulk (one doc per node), use create_idea_documents instead.\n\n` +
+      `doc type values: planning | policy | technical | api | adr`,
+    inputSchema: z.object({
+      project_id: UUID,
+      type: z.string().min(1),
+      title: z.string().min(1),
+      content: z.string().min(1).describe(`Markdown content for the document`),
+      version_id: UUID.optional().nullable(),
+      linked_node_ids: z.array(UUID).optional(),
+    }),
+  },
+  async (args: {
+    project_id: string
+    type: string
+    title: string
+    content: string
+    version_id?: string | null
+    linked_node_ids?: string[]
+  }) =>
+    runTool(async () => {
+      const bytes = new TextEncoder().encode(args.content)
+      const form = new FormData()
+      form.append(`project_id`, args.project_id)
+      form.append(`type`, args.type)
+      form.append(`title`, args.title)
+      if (args.version_id) form.append(`version_id`, args.version_id)
+      form.append(`linked_node_ids`, JSON.stringify(args.linked_node_ids ?? []))
+      form.append(
+        `file`,
+        new Blob([bytes], { type: `text/markdown` }),
+        `${args.title.replace(/\s+/g, `-`)}.md`,
+      )
+      const res = await devatlasRequest(`/documents/upload`, {
+        method: `POST`,
+        body: form,
+      })
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(await readJsonSafe(res))
+    }),
+)
+
+server.registerTool(
   `update_document`,
   {
     description: `Patch document title / type / version_id / linked_node_ids.`,
@@ -909,6 +965,101 @@ server.registerTool(
         created: results,
         ...(errors.length > 0 ? { errors } : {}),
       })
+    }),
+)
+
+// ═════════════════════════════════════════════════════════════════════════
+// Policies
+// ═════════════════════════════════════════════════════════════════════════
+
+server.registerTool(
+  `list_policies`,
+  {
+    description: `List all policies for a project. Policies are architectural constraints that apply to nodes.\n\nseverity: critical | major | minor\nstatus: active | deprecated`,
+    inputSchema: z.object({ project_id: UUID }),
+  },
+  async (args: { project_id: string }) =>
+    runTool(async () => {
+      const res = await devatlasRequest(`/projects/${args.project_id}/policies`)
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(await readJsonSafe(res))
+    }),
+)
+
+server.registerTool(
+  `create_policy`,
+  {
+    description: `Create an architectural policy for a project.\n\nseverity: critical | major | minor`,
+    inputSchema: z.object({
+      project_id: UUID,
+      title: z.string().min(1),
+      description: z.string().optional(),
+      severity: z.enum([`critical`, `major`, `minor`]).optional(),
+    }),
+  },
+  async (args: { project_id: string; title: string; description?: string; severity?: string }) =>
+    runTool(async () => {
+      const body = JSON.stringify({ title: args.title, description: args.description, severity: args.severity ?? `major` })
+      const res = await devatlasRequest(`/projects/${args.project_id}/policies`, { method: `POST`, body })
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(await readJsonSafe(res))
+    }),
+)
+
+server.registerTool(
+  `update_policy`,
+  {
+    description: `Update a policy's title, description, severity, or status (active | deprecated).`,
+    inputSchema: z.object({
+      policy_id: UUID,
+      title: z.string().optional(),
+      description: z.string().optional(),
+      severity: z.enum([`critical`, `major`, `minor`]).optional(),
+      status: z.enum([`active`, `deprecated`]).optional(),
+    }),
+  },
+  async (args: { policy_id: string; title?: string; description?: string; severity?: string; status?: string }) =>
+    runTool(async () => {
+      const patch: Record<string, unknown> = {}
+      if (args.title !== undefined) patch.title = args.title
+      if (args.description !== undefined) patch.description = args.description
+      if (args.severity !== undefined) patch.severity = args.severity
+      if (args.status !== undefined) patch.status = args.status
+      const res = await devatlasRequest(`/policies/${args.policy_id}`, { method: `PATCH`, body: JSON.stringify(patch) })
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(await readJsonSafe(res))
+    }),
+)
+
+server.registerTool(
+  `delete_policy`,
+  {
+    description: `Delete a policy permanently. Consider using update_policy to set status=deprecated instead.`,
+    inputSchema: z.object({ policy_id: UUID }),
+  },
+  async (args: { policy_id: string }) =>
+    runTool(async () => {
+      const res = await devatlasRequest(`/policies/${args.policy_id}`, { method: `DELETE` })
+      if (!res.ok && res.status !== 204) return errResult(await apiErrorBody(res), res.status)
+      return okJson({ ok: true })
+    }),
+)
+
+server.registerTool(
+  `set_policy_nodes`,
+  {
+    description: `Link a policy to a set of nodes (replaces existing links). Pass an empty array to unlink all nodes.\n\nBefore calling: use search(q="name", type="nodes") to resolve node IDs.`,
+    inputSchema: z.object({
+      policy_id: UUID,
+      node_ids: z.array(UUID),
+    }),
+  },
+  async (args: { policy_id: string; node_ids: string[] }) =>
+    runTool(async () => {
+      const body = JSON.stringify({ node_ids: args.node_ids })
+      const res = await devatlasRequest(`/policies/${args.policy_id}/nodes`, { method: `PUT`, body })
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(await readJsonSafe(res))
     }),
 )
 

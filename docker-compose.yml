@@ -42,7 +42,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set local http://minio:9000 devatlas devatlas123 &&
-      mc mb local/devatlas-map --ignore-existing &&
+      mc mb local/akw --ignore-existing &&
       mc mb local/gittrack-attachments --ignore-existing &&
       echo 'Buckets ready'
       "
@@ -71,9 +71,9 @@ services:
       db:
         condition: service_healthy
 
-  devatlas-backend:
+  akw-backend:
     build:
-      context: "./DevAtlas Map/backend"
+      context: ./AKW/backend
     ports:
       - "8000:8000"
     environment:
@@ -81,7 +81,7 @@ services:
       S3_ENDPOINT_URL: http://minio:9000
       S3_ACCESS_KEY: devatlas
       S3_SECRET_KEY: devatlas123
-      S3_BUCKET: devatlas-map
+      S3_BUCKET: akw
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
       CORS_ORIGINS: "http://localhost:5173,http://localhost:5174,http://localhost:5175"
     depends_on:
@@ -121,15 +121,15 @@ services:
     depends_on:
       - portal-backend
 
-  devatlas-frontend:
+  akw-frontend:
     build:
-      context: "./DevAtlas Map/frontend"
+      context: ./AKW/frontend
     ports:
       - "5173:5173"
     environment:
-      VITE_API_TARGET: http://devatlas-backend:8000
+      VITE_API_TARGET: http://akw-backend:8000
     depends_on:
-      - devatlas-backend
+      - akw-backend
 
   gittrack-frontend:
     build:

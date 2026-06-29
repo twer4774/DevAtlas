@@ -1,4 +1,5 @@
 import { ApiResponse } from '../types/api';
+import { getPortalToken } from './apiClient';
 
 interface Attachment {
   id: string;
@@ -21,7 +22,7 @@ class AttachmentService {
     const response = await fetch(`${this.baseUrl}/issues/${issueId}/attachments`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getPortalToken() || localStorage.getItem('token')}`
       },
       body: formData
     });
@@ -37,7 +38,7 @@ class AttachmentService {
   async getAttachments(issueId: string): Promise<ApiResponse<Attachment[]>> {
     const response = await fetch(`${this.baseUrl}/issues/${issueId}/attachments`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getPortalToken() || localStorage.getItem('token')}`
       }
     });
 
@@ -52,7 +53,7 @@ class AttachmentService {
   async downloadAttachment(attachmentId: string, filename: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/attachments/${attachmentId}/download`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getPortalToken() || localStorage.getItem('token')}`
       }
     });
 
@@ -77,7 +78,7 @@ class AttachmentService {
     const response = await fetch(`${this.baseUrl}/attachments/${attachmentId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getPortalToken() || localStorage.getItem('token')}`
       }
     });
 
@@ -92,7 +93,7 @@ class AttachmentService {
   async getAttachmentById(attachmentId: string): Promise<ApiResponse<Attachment>> {
     const response = await fetch(`${this.baseUrl}/attachments/${attachmentId}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getPortalToken() || localStorage.getItem('token')}`
       }
     });
 

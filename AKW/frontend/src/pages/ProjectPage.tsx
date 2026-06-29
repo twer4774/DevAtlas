@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search } from 'lucide-react'
+import { ArrowLeft, Search, Shield, GitMerge } from 'lucide-react'
 import {
   Group as PanelGroup,
   Panel,
@@ -53,8 +53,22 @@ export function ProjectPage() {
             — {activeVersion.name}
           </span>
         )}
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2">
           <AuthBadge />
+          <button
+            onClick={() => navigate(`/projects/${projectId}/policies`)}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors px-2 py-1 rounded hover:bg-gray-800"
+            title="Policies"
+          >
+            <Shield size={13} />
+          </button>
+          <button
+            onClick={() => navigate(`/projects/${projectId}/knowledge-graph`)}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors px-2 py-1 rounded hover:bg-gray-800"
+            title="Knowledge Graph"
+          >
+            <GitMerge size={13} />
+          </button>
           <button
             onClick={openSearch}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors px-2 py-1 rounded hover:bg-gray-800"

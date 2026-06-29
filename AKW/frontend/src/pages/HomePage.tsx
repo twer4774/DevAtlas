@@ -41,8 +41,8 @@ export function HomePage() {
     <div className="min-h-screen bg-gray-950 text-white">
       <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">DevAtlas Map</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Architecture Visualization</p>
+          <h1 className="text-xl font-bold text-white">AKW</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Architecture Knowledge Workspace</p>
         </div>
         <div className="flex items-center gap-2">
           <AuthBadge />
