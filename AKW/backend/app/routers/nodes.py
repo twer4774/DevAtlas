@@ -3,11 +3,11 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db
+from app.core.deps import get_db, get_current_user
 from app.schemas.node import NodeCreate, NodeUpdate, NodeResponse
 from app.services import node_service
 
-router = APIRouter(tags=["nodes"])
+router = APIRouter(tags=["nodes"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("/versions/{version_id}/nodes", response_model=list[NodeResponse])

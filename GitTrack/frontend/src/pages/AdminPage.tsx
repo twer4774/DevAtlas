@@ -87,13 +87,13 @@ export const AdminPage: React.FC = () => {
                   <h2 className="ml-3 text-lg font-semibold text-gray-900">User Management</h2>
                 </div>
                 <p className="text-gray-600 mb-4">
-                  Manage user accounts, roles, and permissions.
+                  조직 멤버, 역할, 초대 링크는 Portal에서 통합 관리됩니다.
                 </p>
-                <button 
-                  onClick={() => setActiveTab('users')}
+                <button
+                  onClick={() => window.open('http://localhost:5174', '_blank')}
                   className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  Manage Users
+                  Portal에서 관리 →
                 </button>
               </div>
 
@@ -119,11 +119,17 @@ export const AdminPage: React.FC = () => {
       case 'users':
         return (
           <div className="text-center py-12">
-            <Users className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">User Management</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              User management functionality will be implemented here.
+            <Users className="mx-auto h-12 w-12 text-blue-400" />
+            <h3 className="mt-4 text-lg font-semibold text-gray-900">멤버 관리는 Portal에서</h3>
+            <p className="mt-2 text-sm text-gray-500 max-w-sm mx-auto">
+              조직 멤버, 역할, 초대 링크는 Portal에서 통합 관리됩니다.
             </p>
+            <button
+              onClick={() => window.open('http://localhost:5174', '_blank')}
+              className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              Portal 열기 →
+            </button>
           </div>
         );
       case 'settings':

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import projects, versions, nodes, edges, documents, changelog, search, policies
+from app.routers import projects, versions, nodes, edges, documents, changelog, search, roadmap
 
 
 @asynccontextmanager
@@ -29,7 +29,7 @@ app.include_router(edges.router)
 app.include_router(documents.router)
 app.include_router(changelog.router)
 app.include_router(search.router)
-app.include_router(policies.router)
+app.include_router(roadmap.router)
 
 
 @app.get("/health")

@@ -3,13 +3,13 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db
+from app.core.deps import get_db, get_current_user
 from app.schemas.version import VersionCreate, VersionFork, VersionUpdate, VersionResponse
 from app.schemas.diff import DiffResponse
 from app.services import version_service
 from app.services.diff_service import diff_versions
 
-router = APIRouter(tags=["versions"])
+router = APIRouter(tags=["versions"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/projects/{project_id}/versions", response_model=VersionResponse, status_code=201)

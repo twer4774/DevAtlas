@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 
@@ -22,7 +22,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
   const { hasRole, hasPermission } = usePermissions();
-  const location = useLocation();
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -33,9 +32,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Redirect to login if not authenticated
+  // Redirect to Portal if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    window.location.replace('http://localhost:5174');
+    return null;
   }
 
   // Check admin requirement (legacy support)

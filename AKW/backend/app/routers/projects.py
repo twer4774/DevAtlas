@@ -7,7 +7,7 @@ from app.core.deps import get_db, get_current_user, get_org_id
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.services import project_service
 
-router = APIRouter(prefix="/projects", tags=["projects"])
+router = APIRouter(prefix="/projects", tags=["projects"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/", response_model=ProjectResponse, status_code=201)

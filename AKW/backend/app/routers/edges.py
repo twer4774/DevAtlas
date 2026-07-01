@@ -3,12 +3,12 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db
+from app.core.deps import get_db, get_current_user
 from app.schemas.edge import EdgeCreate, EdgeUpdate, EdgeResponse
 from app.services import edge_service
 
 
-router = APIRouter(tags=["edges"])
+router = APIRouter(tags=["edges"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("/versions/{version_id}/edges", response_model=list[EdgeResponse])

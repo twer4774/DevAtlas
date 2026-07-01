@@ -3,11 +3,11 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db
+from app.core.deps import get_db, get_current_user
 from app.schemas.changelog import ChangeLogCreate, ChangeLogResponse
 from app.services.changelog_service import create_changelog_entry, get_changelog
 
-router = APIRouter(tags=["changelog"])
+router = APIRouter(tags=["changelog"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("/versions/{version_id}/changelog", response_model=list[ChangeLogResponse])

@@ -4,13 +4,13 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db
+from app.core.deps import get_db, get_current_user
 from app.core.s3 import get_s3_client
 from app.config import settings
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentResponse
 from app.services import document_service
 
-router = APIRouter(tags=["documents"])
+router = APIRouter(tags=["documents"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/documents/upload", response_model=DocumentResponse, status_code=201)

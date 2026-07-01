@@ -91,6 +91,10 @@ const server = new McpServer(
       `Typical workflow: list_projects → list_versions → list_nodes / create_node → create_edge\n\n` +
       `Finding node IDs for edges: call list_nodes(version_id) to get all node IDs at once, ` +
       `or search(q="name", type="nodes") to find a specific node. Never guess UUIDs.\n\n` +
+      `Project overview (manager shortcut): project_overview(project_id) returns nodes/docs/roadmap/policies all at once.\n\n` +
+      `Reading document content: read_document(doc_id) returns the raw markdown text.\n\n` +
+      `Roadmap management: list_roadmap → create_roadmap_item / update_roadmap_item / delete_roadmap_item.\n` +
+      `Roadmap fields — priority: p1|p2|p3|p4  size: XS|S|M|L|XL  status: todo|in_progress|done\n\n` +
       `Creating areas/groups (영역): use create_node with type="group". Set metadata_: {width, height} ` +
       `for the container size. Place child nodes inside by setting their parent_id to the group UUID.\n\n` +
       `Creating documents with content: use write_document for a single document with inline markdown. ` +
@@ -1060,6 +1064,235 @@ server.registerTool(
       const res = await devatlasRequest(`/policies/${args.policy_id}/nodes`, { method: `PUT`, body })
       if (!res.ok) return errResult(await apiErrorBody(res), res.status)
       return okJson(await readJsonSafe(res))
+    }),
+)
+
+// ═════════════════════════════════════════════════════════════════════════
+// Roadmap
+// ═════════════════════════════════════════════════════════════════════════
+
+server.registerTool(
+  `list_roadmap`,
+  {
+    description:
+      `List all roadmap items for a project, ordered by priority then sort_order.\n\n` +
+      `priority: p1|p2|p3|p4  ·  status: todo|in_progress|done  ·  size: XS|S|M|L|XL`,
+    inputSchema: z.object({ project_id: UUID }),
+  },
+  async (args: { project_id: string }) =>
+    runTool(async () => {
+      const res = await devatlasRequest(`/projects/${args.project_id}/roadmap`)
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(await readJsonSafe(res))
+    }),
+)
+
+server.registerTool(
+  `create_roadmap_item`,
+  {
+    description:
+      `Add a roadmap item to a project.\n\n` +
+      `priority: p1 (immediate) | p2 (next) | p3 (later) | p4 (someday)\n` +
+      `size: XS | S | M | L | XL\n` +
+      `status: todo | in_progress | done\n` +
+      `category: 서비스/팀 이름 (예: "AKW", "GitTrack", "Portal", "공통")`,
+    inputSchema: z.object({
+      project_id: UUID,
+      priority: z.enum([`p1`, `p2`, `p3`, `p4`]).default(`p3`),
+      category: z.string().min(1).default(`공통`),
+      title: z.string().min(1),
+      description: z.string().optional(),
+      size: z.enum([`XS`, `S`, `M`, `L`, `XL`]).default(`M`),
+      status: z.enum([`todo`, `in_progress`, `done`]).default(`todo`),
+    }),
+  },
+  async (args: {
+    project_id: string
+    priority: string
+    category: string
+    title: string
+    description?: string
+    size: string
+    status: string
+  }) =>
+    runTool(async () => {
+      const body = JSON.stringify({
+        priority: args.priority,
+        category: args.category,
+        title: args.title,
+        description: args.description ?? null,
+        size: args.size,
+        status: args.status,
+      })
+      const res = await devatlasRequest(`/projects/${args.project_id}/roadmap`, {
+        method: `POST`,
+        body,
+      })
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(await readJsonSafe(res))
+    }),
+)
+
+server.registerTool(
+  `update_roadmap_item`,
+  {
+    description: `Update a roadmap item's fields. Only provided fields are changed.`,
+    inputSchema: z.object({
+      item_id: UUID,
+      priority: z.enum([`p1`, `p2`, `p3`, `p4`]).optional(),
+      category: z.string().optional(),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      size: z.enum([`XS`, `S`, `M`, `L`, `XL`]).optional(),
+      status: z.enum([`todo`, `in_progress`, `done`]).optional(),
+    }),
+  },
+  async (args: {
+    item_id: string
+    priority?: string
+    category?: string
+    title?: string
+    description?: string
+    size?: string
+    status?: string
+  }) =>
+    runTool(async () => {
+      const patch: Record<string, unknown> = {}
+      if (args.priority !== undefined) patch.priority = args.priority
+      if (args.category !== undefined) patch.category = args.category
+      if (args.title !== undefined) patch.title = args.title
+      if (args.description !== undefined) patch.description = args.description
+      if (args.size !== undefined) patch.size = args.size
+      if (args.status !== undefined) patch.status = args.status
+      const res = await devatlasRequest(`/roadmap/${args.item_id}`, {
+        method: `PATCH`,
+        body: JSON.stringify(patch),
+      })
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      return okJson(await readJsonSafe(res))
+    }),
+)
+
+server.registerTool(
+  `delete_roadmap_item`,
+  {
+    description: `Delete a roadmap item permanently. Consider update_roadmap_item(status="done") instead if you want to keep history.`,
+    inputSchema: z.object({ item_id: UUID }),
+  },
+  async (args: { item_id: string }) =>
+    runTool(async () => {
+      const res = await devatlasRequest(`/roadmap/${args.item_id}`, {
+        method: `DELETE`,
+      })
+      if (!res.ok && res.status !== 204)
+        return errResult(await apiErrorBody(res), res.status)
+      return okJson({ ok: true })
+    }),
+)
+
+// ═════════════════════════════════════════════════════════════════════════
+// Document content reader
+// ═════════════════════════════════════════════════════════════════════════
+
+server.registerTool(
+  `read_document`,
+  {
+    description:
+      `Read the actual text/markdown content of a document.\n\n` +
+      `Typical usage: list_version_documents or list_node_documents → pick a doc_id → read_document.\n` +
+      `Returns raw text (usually markdown). Returns empty string if no content uploaded yet.`,
+    inputSchema: z.object({ doc_id: UUID }),
+  },
+  async (args: { doc_id: string }) =>
+    runTool(async () => {
+      const res = await devatlasRequest(`/documents/${args.doc_id}/raw`)
+      if (!res.ok) return errResult(await apiErrorBody(res), res.status)
+      const text = await res.text()
+      return okJson(text)
+    }),
+)
+
+// ═════════════════════════════════════════════════════════════════════════
+// Project overview (manager shortcut)
+// ═════════════════════════════════════════════════════════════════════════
+
+server.registerTool(
+  `project_overview`,
+  {
+    description:
+      `관리자/AI 파악용: 프로젝트 전체 현황을 한 번에 조회합니다.\n\n` +
+      `반환 내용:\n` +
+      `· project — 프로젝트 기본 정보\n` +
+      `· versions — 버전 목록 (각 버전의 node_count, edge_count, doc_count 포함)\n` +
+      `· roadmap — 전체 로드맵 항목 (p1~p4 우선순위별)\n` +
+      `· policies — 아키텍처 정책 목록\n` +
+      `· node_summary — 최신 버전의 노드 이름 목록 (최대 50개)\n\n` +
+      `이 도구 하나로 프로젝트 현황을 파악한 후 세부 조회나 편집 도구를 사용하세요.`,
+    inputSchema: z.object({ project_id: UUID }),
+  },
+  async (args: { project_id: string }) =>
+    runTool(async () => {
+      const [projectRes, versionsRes, roadmapRes, policiesRes] = await Promise.all([
+        devatlasRequest(`/projects/${args.project_id}`),
+        devatlasRequest(`/projects/${args.project_id}/versions`),
+        devatlasRequest(`/projects/${args.project_id}/roadmap`),
+        devatlasRequest(`/projects/${args.project_id}/policies`),
+      ])
+
+      if (!projectRes.ok) return errResult(await apiErrorBody(projectRes), projectRes.status)
+      if (!versionsRes.ok) return errResult(await apiErrorBody(versionsRes), versionsRes.status)
+
+      const project = await readJsonSafe(projectRes)
+      const versions = (await readJsonSafe(versionsRes)) as Array<{ id: string; name: string }> | null ?? []
+      const roadmap = (await readJsonSafe(roadmapRes)) as unknown[] | null ?? []
+      const policies = policiesRes.ok ? ((await readJsonSafe(policiesRes)) as unknown[] | null ?? []) : []
+
+      // Fetch node/edge/doc counts for each version in parallel (use latest version for node summary)
+      const versionDetails = await Promise.all(
+        versions.map(async (v) => {
+          const [nRes, eRes, dRes] = await Promise.all([
+            devatlasRequest(`/versions/${v.id}/nodes`),
+            devatlasRequest(`/versions/${v.id}/edges`),
+            devatlasRequest(`/versions/${v.id}/documents`),
+          ])
+          const nodes = nRes.ok ? ((await readJsonSafe(nRes)) as Array<{ id: string; title: string; type: string }> | null ?? []) : []
+          const edges = eRes.ok ? ((await readJsonSafe(eRes)) as unknown[] | null ?? []) : []
+          const docs = dRes.ok ? ((await readJsonSafe(dRes)) as Array<{ id: string; title: string }> | null ?? []) : []
+          return { id: v.id, name: v.name, nodes, edges, docs }
+        }),
+      )
+
+      // Latest version = last in list (or pick highest created_at if needed)
+      const latest = versionDetails[versionDetails.length - 1]
+
+      const overview = {
+        project,
+        versions: versionDetails.map(v => ({
+          id: v.id,
+          name: v.name,
+          node_count: v.nodes.length,
+          edge_count: v.edges.length,
+          doc_count: v.docs.length,
+        })),
+        roadmap_by_priority: {
+          p1: (roadmap as Array<{ priority: string }>).filter(i => i.priority === `p1`),
+          p2: (roadmap as Array<{ priority: string }>).filter(i => i.priority === `p2`),
+          p3: (roadmap as Array<{ priority: string }>).filter(i => i.priority === `p3`),
+          p4: (roadmap as Array<{ priority: string }>).filter(i => i.priority === `p4`),
+        },
+        roadmap_total: roadmap.length,
+        policies,
+        latest_version: latest
+          ? {
+              id: latest.id,
+              name: latest.name,
+              node_summary: latest.nodes.slice(0, 50).map(n => `${n.id}:${n.title} (${n.type})`),
+              doc_list: latest.docs.map(d => `${d.id}:${d.title}`),
+            }
+          : null,
+      }
+
+      return okJson(overview)
     }),
 )
 
