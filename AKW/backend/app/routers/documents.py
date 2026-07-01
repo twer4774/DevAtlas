@@ -5,7 +5,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db, get_current_user
-from app.core.s3 import get_s3_client
+from app.core.s3 import get_s3_client, get_presigned_url
 from app.config import settings
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentResponse
 from app.services import document_service
@@ -48,14 +48,23 @@ async def get_document(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     return response
 
 
+def _with_url(doc) -> DocumentResponse:
+    r = DocumentResponse.model_validate(doc)
+    if r.content_url:
+        r.content_url = get_presigned_url(r.content_url)
+    return r
+
+
 @router.get("/versions/{version_id}/documents", response_model=list[DocumentResponse])
 async def list_version_documents(version_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    return await document_service.get_version_documents(db, version_id)
+    docs = await document_service.get_version_documents(db, version_id)
+    return [_with_url(d) for d in docs]
 
 
 @router.get("/nodes/{node_id}/documents", response_model=list[DocumentResponse])
 async def list_node_documents(node_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    return await document_service.get_node_documents(db, node_id)
+    docs = await document_service.get_node_documents(db, node_id)
+    return [_with_url(d) for d in docs]
 
 
 @router.patch("/documents/{doc_id}", response_model=DocumentResponse)

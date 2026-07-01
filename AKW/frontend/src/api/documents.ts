@@ -25,4 +25,6 @@ export const documentsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data),
   delete: (id: string) => client.delete(`/documents/${id}`),
+  rawContent: (id: string) =>
+    client.get<string>(`/documents/${id}/raw`, { responseType: 'text' }).then((r) => r.data),
 }

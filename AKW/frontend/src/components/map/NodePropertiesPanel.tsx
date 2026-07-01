@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Save, FileText, Settings2, ArrowLeft, Edit2, Search, Plus, FolderOpen, LayoutDashboard, Trash2, ArrowRight, Link2Off, Network, Shield, Check } from 'lucide-react'
+import { Save, FileText, Settings2, ArrowLeft, Edit2, Search, Plus, FolderOpen, LayoutDashboard, Trash2, ArrowRight, Link2Off, Network } from 'lucide-react'
 import { useMapStore } from '@/store/mapStore'
 import { useNodes, useUpdateNode } from '@/hooks/useNodes'
 import { useEdges, useUpdateEdge, useDeleteEdge } from '@/hooks/useEdges'
 import { useDocument, useNodeDocuments, useVersionDocuments, useDeleteDocument } from '@/hooks/useDocuments'
-import { usePolicies, useCreatePolicy, useDeletePolicy, useSetPolicyNodes } from '@/hooks/usePolicies'
-import type { Policy } from '@/api/policies'
 import { useDocumentStore } from '@/store/documentStore'
 import { useRelationTypeStore } from '@/store/relationTypeStore'
 import { DocumentEditor } from '@/components/document/DocumentEditor'
@@ -23,7 +21,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import type { ArchitectureNode } from '@/types'
 
-type Tab = 'props' | 'docs' | 'policy'
+type Tab = 'props' | 'docs'
 
 interface Props {
   projectId: string
@@ -409,100 +407,6 @@ function AreaPanel({ node, versionId }: { node: ArchitectureNode; versionId: str
   )
 }
 
-// ── 정책 탭 ────────────────────────────────────────────────────────────────────
-const SEV_COLOR: Record<string, string> = { critical: '#f85149', major: '#d29922', minor: '#58a6ff' }
-
-function PolicyTab({ nodeId, projectId }: { nodeId: string; projectId: string }) {
-  const { data: allPolicies, isLoading } = usePolicies(projectId)
-  const createPolicy = useCreatePolicy(projectId)
-  const deletePolicy = useDeletePolicy(projectId)
-  const setPolicyNodes = useSetPolicyNodes(projectId)
-
-  const [adding, setAdding] = useState(false)
-  const [newTitle, setNewTitle] = useState('')
-  const [newSev, setNewSev] = useState<'critical' | 'major' | 'minor'>('minor')
-
-  const policies = (allPolicies ?? []).filter((p: Policy) => p.node_ids.includes(nodeId))
-
-  const handleCreate = async () => {
-    if (!newTitle.trim()) return
-    const created = await createPolicy.mutateAsync({ title: newTitle.trim(), severity: newSev })
-    await setPolicyNodes.mutateAsync({ id: created.id, nodeIds: [nodeId] })
-    setNewTitle('')
-    setAdding(false)
-  }
-
-  const handleDetach = async (p: Policy) => {
-    const remaining = p.node_ids.filter(id => id !== nodeId)
-    if (remaining.length === 0) await deletePolicy.mutateAsync(p.id)
-    else await setPolicyNodes.mutateAsync({ id: p.id, nodeIds: remaining })
-  }
-
-  return (
-    <div className="flex flex-col">
-      <div className="flex justify-end px-3 py-1.5 border-b border-gray-800/50">
-        <button onClick={() => setAdding(v => !v)}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors">
-          <Plus size={13} /> 정책 추가
-        </button>
-      </div>
-
-      {adding && (
-        <div className="p-3 border-b border-gray-800 space-y-2">
-          <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="정책 이름 *" autoFocus
-            className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500"
-            onKeyDown={e => e.key === 'Enter' && handleCreate()}
-          />
-          <div className="flex gap-2">
-            {(['critical', 'major', 'minor'] as const).map(s => (
-              <button key={s} onClick={() => setNewSev(s)}
-                className="flex-1 text-xs py-1 rounded border transition-all capitalize"
-                style={{
-                  borderColor: newSev === s ? SEV_COLOR[s] : '#374151',
-                  color: newSev === s ? SEV_COLOR[s] : '#6b7280',
-                  backgroundColor: newSev === s ? SEV_COLOR[s] + '18' : 'transparent',
-                }}>
-                {s}
-              </button>
-            ))}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>취소</Button>
-            <Button size="sm" onClick={handleCreate} disabled={createPolicy.isPending || setPolicyNodes.isPending}>
-              <Check size={12} /> 저장
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {isLoading ? (
-        <Spinner className="mx-auto mt-6" />
-      ) : (
-        <>
-          {policies.length === 0 && !adding && (
-            <p className="text-xs text-gray-500 text-center mt-4 px-3">연결된 정책이 없습니다</p>
-          )}
-          {policies.map((p: Policy) => (
-            <div key={p.id} className="group px-3 py-2.5 border-b border-gray-800/50 hover:bg-gray-800/40">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: SEV_COLOR[p.severity] }} />
-                <span className="text-sm text-gray-200 flex-1 truncate">{p.title}</span>
-                <button onClick={() => handleDetach(p)}
-                  className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all p-0.5 rounded"
-                  title={p.node_ids.length === 1 ? '정책 삭제' : '이 노드에서 분리'}>
-                  <Trash2 size={12} />
-                </button>
-              </div>
-              {p.description && <p className="text-xs text-gray-500 mt-1 pl-3.5">{p.description}</p>}
-              <p className="text-[10px] font-semibold mt-0.5 pl-3.5" style={{ color: SEV_COLOR[p.severity] }}>{p.severity}</p>
-            </div>
-          ))}
-        </>
-      )}
-    </div>
-  )
-}
-
 // ── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 export function NodePropertiesPanel({ projectId, versionId }: Props) {
   const { selectedNodeId, selectedEdgeId, enterDrillDown, setSelectedNode, setPendingFocusNode } = useMapStore()
@@ -731,9 +635,8 @@ export function NodePropertiesPanel({ projectId, versionId }: Props) {
       {/* Tabs */}
       <div className="flex border-b border-gray-800">
         {([
-          { id: 'props',  icon: <Settings2 size={12} />, label: '속성' },
-          { id: 'docs',   icon: <FileText size={12} />,  label: `문서${nodeDocs?.length ? ` (${nodeDocs.length})` : ''}` },
-          { id: 'policy', icon: <Shield size={12} />,    label: '정책' },
+          { id: 'props', icon: <Settings2 size={12} />, label: '속성' },
+          { id: 'docs',  icon: <FileText size={12} />,  label: `문서${nodeDocs?.length ? ` (${nodeDocs.length})` : ''}` },
         ] as { id: Tab; icon: JSX.Element; label: string }[]).map(({ id, icon, label }) => (
           <button
             key={id}
@@ -835,9 +738,6 @@ export function NodePropertiesPanel({ projectId, versionId }: Props) {
           />
         )}
 
-        {tab === 'policy' && (
-          <PolicyTab nodeId={node.id} projectId={projectId} />
-        )}
       </div>
     </div>
   )

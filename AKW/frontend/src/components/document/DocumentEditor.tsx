@@ -49,8 +49,7 @@ export function DocumentEditor({ docId, projectId, versionId, linkedNodeId }: Pr
   useEffect(() => {
     if (!doc?.content_url) return
     setContentLoading(true)
-    fetch(doc.content_url)
-      .then((r) => r.text())
+    documentsApi.rawContent(doc.id)
       .then((text) => {
         setContent(text)
         setOriginalContent(text)
@@ -60,7 +59,7 @@ export function DocumentEditor({ docId, projectId, versionId, linkedNodeId }: Pr
         setOriginalContent('')
       })
       .finally(() => setContentLoading(false))
-  }, [doc?.content_url])
+  }, [doc?.id]) // eslint-disable-line
 
   // 새 문서 모드(docId 없음) 진입 시 상태 초기화
   useEffect(() => {

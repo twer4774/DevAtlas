@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useDocument } from '@/hooks/useDocuments'
+import { documentsApi } from '@/api/documents'
 import { Spinner } from '@/components/common/Spinner'
 
 export function DocumentViewer({ docId }: { docId: string }) {
@@ -12,11 +13,11 @@ export function DocumentViewer({ docId }: { docId: string }) {
   useEffect(() => {
     if (!doc?.content_url) return
     setFetching(true)
-    fetch(doc.content_url)
-      .then((r) => r.text())
+    documentsApi.rawContent(docId)
       .then(setContent)
+      .catch(() => setContent(''))
       .finally(() => setFetching(false))
-  }, [doc?.content_url])
+  }, [doc?.id]) // eslint-disable-line
 
   if (isLoading || fetching) return <Spinner className="mx-auto mt-6" />
   if (!doc) return null
