@@ -110,6 +110,12 @@ body {
   fill: currentColor;
 }
 
+/* MCP AI 노드 글로우 — author==='mcp' && 최근 2분 이내 */
+@keyframes mcp-glow {
+  0%, 100% { box-shadow: 0 0 0 1px #8b5cf650, 0 0 16px #8b5cf620, 0 4px 20px rgba(0,0,0,0.4); }
+  50%       { box-shadow: 0 0 0 2px #8b5cf690, 0 0 36px #8b5cf648, 0 8px 32px rgba(0,0,0,0.5); }
+}
+
 /* Custom scrollbar for panels */
 ::-webkit-scrollbar {
   width: 4px;

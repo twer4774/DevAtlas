@@ -4,7 +4,7 @@ import {
   Layers, Target, Zap, Shield, ExternalLink,
   Box, ChevronRight, ChevronDown, Server,
   Database, Archive, Globe, Radio, Workflow, Cloud,
-  Lock, Cpu, HardDrive, List, ArrowRightLeft, Code, Cog, Network,
+  Lock, Cpu, HardDrive, List, ArrowRightLeft, Code, Cog, Network, Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import {
@@ -74,10 +74,15 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
   const typeLabel = getNodeTypeLabel(node.type)
   const Icon = TYPE_ICONS[node.type] ?? Box
 
-  const status = node.metadata_?.status as NodeStatus | undefined
-  const description = node.metadata_?.description as string | undefined
+  const status      = node.metadata_?.status      as NodeStatus | undefined
+  const description = node.metadata_?.description as string    | undefined
+  const port        = node.metadata_?.port        as string | number | undefined
+  const tech        = node.metadata_?.tech        as string    | undefined
   const statusColor = status ? NODE_STATUS_COLORS[status] : undefined
   const statusLabel = status ? NODE_STATUS_LABELS[status] : undefined
+
+  const isMcp    = node.author === 'mcp'
+  const isRecent = isMcp && (Date.now() - new Date(node.updated_at).getTime()) < 120_000
 
   // Diff mode overrides
   let diffBorder = ''
@@ -102,14 +107,18 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
       ? `1.5px solid ${typeColor}99`
       : isHighlighted
         ? '1.5px solid rgba(251,146,60,0.5)'
-        : `1px solid ${typeColor}22`
+        : isMcp
+          ? `1px solid #8b5cf645`
+          : `1px solid ${typeColor}22`
   )
 
-  const boxShadow = selected
-    ? `0 0 0 1px ${typeColor}44, 0 0 24px ${typeColor}44, 0 8px 32px rgba(0,0,0,0.5)`
-    : isHighlighted
-      ? '0 0 16px rgba(251,146,60,0.2), 0 4px 16px rgba(0,0,0,0.4)'
-      : '0 4px 20px rgba(0,0,0,0.4)'
+  const boxShadow = isRecent
+    ? undefined  // mcp-glow 애니메이션이 처리
+    : selected
+      ? `0 0 0 1px ${typeColor}44, 0 0 24px ${typeColor}44, 0 8px 32px rgba(0,0,0,0.5)`
+      : isHighlighted
+        ? '0 0 16px rgba(251,146,60,0.2), 0 4px 16px rgba(0,0,0,0.4)'
+        : '0 4px 20px rgba(0,0,0,0.4)'
 
   const isDimmedBySelection = selectedNodeId != null && selectedNodeId !== node.id
   const nodeOpacity = (isDimmedBySelection && !nodeHovered) ? 0.5 : 1
@@ -118,37 +127,69 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
     // overflow-hidden을 내부 wrapper로 분리 → Handle이 클리핑되지 않음
     <div
       className={cn('relative w-[210px] rounded-xl group will-change-transform')}
-      style={{ border, boxShadow, opacity: nodeOpacity, transition: 'opacity 0.2s' }}
+      style={{
+        border: nodeHovered && !selected && !diffBorder
+          ? `1px solid ${isMcp ? '#8b5cf680' : typeColor + '60'}`
+          : border,
+        boxShadow: nodeHovered && !selected && !isRecent
+          ? `0 0 0 1px ${typeColor}22, 0 8px 28px rgba(0,0,0,0.55)`
+          : boxShadow,
+        opacity: nodeOpacity,
+        transition: 'opacity 0.2s, box-shadow 0.15s, border-color 0.15s',
+        animation: isRecent ? 'mcp-glow 1.5s ease-in-out 5' : undefined,
+      }}
       onMouseEnter={() => setNodeHovered(true)}
       onMouseLeave={() => setNodeHovered(false)}
     >
       {/* 콘텐츠 영역 — rounded + overflow-hidden을 여기에만 적용 */}
       <div
         className="flex flex-col rounded-xl overflow-hidden"
-        style={{ background: diffBg || `linear-gradient(145deg, ${typeColor}12 0%, #0d1117 55%)` }}
+        style={{ background: diffBg || `linear-gradient(160deg, ${typeColor}1e 0%, ${typeColor}08 50%, #0d1117 100%)` }}
       >
         {/* Top accent bar */}
         <div
           className="h-[2px] w-full flex-shrink-0"
-          style={{ background: `linear-gradient(90deg, ${typeColor}cc 0%, ${typeColor}00 100%)` }}
+          style={{ background: isMcp
+            ? 'linear-gradient(90deg, #8b5cf6cc 0%, #6366f100 100%)'
+            : `linear-gradient(90deg, ${typeColor}cc 0%, ${typeColor}00 100%)` }}
         />
+
+        {/* AI 뱃지 — MCP로 생성/수정된 노드 */}
+        {isMcp && (
+          <div
+            className="absolute top-1.5 right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full pointer-events-none"
+            style={{
+              background: '#8b5cf618',
+              border: '1px solid #8b5cf640',
+              color: '#a78bfa',
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.02em',
+              zIndex: 10,
+            }}
+          >
+            <Sparkles size={8} strokeWidth={2.5} />
+            AI
+          </div>
+        )}
 
         {/* Header: icon + type label + status */}
         <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
           <div
-            className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
+            className="flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0"
             style={{
-              backgroundColor: typeColor + '20',
-              border: `1px solid ${typeColor}40`,
+              backgroundColor: typeColor + '22',
+              border: `1px solid ${typeColor}44`,
               color: typeColor,
+              boxShadow: `0 0 8px ${typeColor}20`,
             }}
           >
-            <Icon size={14} strokeWidth={1.8} />
+            <Icon size={15} strokeWidth={1.7} />
           </div>
 
           <span
-            className="text-[9px] font-bold uppercase tracking-widest flex-1 truncate"
-            style={{ color: typeColor + 'bb' }}
+            className="text-[10px] font-semibold uppercase tracking-wider flex-1 truncate"
+            style={{ color: typeColor + 'cc' }}
           >
             {typeLabel}
           </span>
@@ -198,6 +239,28 @@ export const ArchNodeComponent = memo(({ data, selected }: NodeProps) => {
             </span>
           )}
         </div>
+
+        {/* port / tech 메타 태그 */}
+        {(port != null || tech) && (
+          <div className="flex items-center gap-1 px-3 pb-2 flex-wrap">
+            {port != null && (
+              <span
+                className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                style={{ background: typeColor + '18', color: typeColor + 'bb', border: `1px solid ${typeColor}25` }}
+              >
+                :{port}
+              </span>
+            )}
+            {tech && (
+              <span
+                className="text-[9px] px-1.5 py-0.5 rounded"
+                style={{ background: '#ffffff0a', color: '#9ca3af', border: '1px solid #ffffff12' }}
+              >
+                {tech}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Expand / drill-down */}
         {hasChildren && (
