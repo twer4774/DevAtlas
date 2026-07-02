@@ -41,7 +41,7 @@ import { Spinner } from '@/components/common/Spinner'
 import { Modal } from '@/components/common/Modal'
 import { Button } from '@/components/common/Button'
 import { getNodeTypeColor } from '@/lib/constants'
-import { Plus, RectangleHorizontal, GitBranch } from 'lucide-react'
+import { Plus, RectangleHorizontal, GitBranch, Sparkles } from 'lucide-react'
 import type { ArchitectureNode, NodeEdge } from '@/types'
 
 const nodeTypes: NodeTypes = { archNode: ArchNodeComponent, groupArea: GroupAreaNode }
@@ -807,27 +807,58 @@ function FlowInner({ versionId }: { versionId: string }) {
         />
       </ReactFlow>
       {showEmptyHint && (
-        <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center gap-5 max-w-xs text-center">
-            {/* 아이콘 */}
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)' }}
-            >
-              <GitBranch size={26} style={{ color: '#60a5fa' }} />
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-[15px] font-semibold text-gray-200">아키텍처 맵이 비어있습니다</p>
-              <p className="text-[13px] text-gray-500 leading-relaxed">
-                노드를 추가하고 연결해 시스템 구조를<br />시각화해보세요
+        <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none">
+          <div
+            className="relative pointer-events-auto rounded-2xl p-8 max-w-md w-full mx-4 space-y-5"
+            style={{
+              background: 'rgba(13,17,23,0.92)',
+              border: '1px solid #30363d',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+            }}
+          >
+            {/* 헤더 */}
+            <div className="text-center space-y-2">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto"
+                style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
+              >
+                <GitBranch size={22} className="text-white" />
+              </div>
+              <h2 className="text-base font-bold" style={{ color: '#e6edf3' }}>캔버스가 비어 있어요</h2>
+              <p className="text-xs leading-relaxed" style={{ color: '#8b949e' }}>
+                아키텍처 노드를 추가해서 시스템 구조를 시각화하세요.
               </p>
             </div>
 
+            {/* AI 프롬프트 예시 */}
+            <div className="rounded-xl p-4 space-y-3" style={{ background: '#161b22', border: '1px solid #21262d' }}>
+              <div className="flex items-center gap-2">
+                <Sparkles size={12} style={{ color: '#a78bfa' }} />
+                <span className="text-xs font-semibold" style={{ color: '#a78bfa' }}>Claude에게 요청하기</span>
+              </div>
+              <div className="space-y-1.5">
+                {[
+                  '"백엔드 API 서버 노드 추가해줘"',
+                  '"Redis 캐시와 PostgreSQL DB 노드 만들고 API 서버에 연결해줘"',
+                  '"프론트엔드→API→DB 흐름으로 아키텍처 설계해줘"',
+                ].map((ex, i) => (
+                  <div
+                    key={i}
+                    className="text-[11px] px-3 py-2 rounded-lg font-mono leading-relaxed"
+                    style={{ background: '#0d1117', color: '#8b949e', border: '1px solid #21262d' }}
+                  >
+                    {ex}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 직접 추가 버튼 */}
             <div className="flex gap-2">
               <button
                 onClick={() => setOnboardingAction('node')}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[13px] font-medium transition-all"
                 style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.28)', color: '#60a5fa' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.2)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.12)' }}
@@ -837,7 +868,7 @@ function FlowInner({ versionId }: { versionId: string }) {
               </button>
               <button
                 onClick={() => setOnboardingAction('area')}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[13px] font-medium transition-all"
                 style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#6b7280' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
@@ -846,10 +877,6 @@ function FlowInner({ versionId }: { versionId: string }) {
                 영역 추가
               </button>
             </div>
-
-            <p className="text-[11px] text-gray-700">
-              툴바 버튼이나 <kbd className="px-1 py-0.5 rounded text-[10px] bg-gray-800 border border-gray-700 text-gray-500">⌘K</kbd> 검색으로도 노드를 관리할 수 있습니다
-            </p>
           </div>
         </div>
       )}
